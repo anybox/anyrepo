@@ -1,0 +1,2 @@
+recursive-include issuebot/templates *
+recursive-include issuebot/static *
