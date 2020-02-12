@@ -2,7 +2,7 @@ import os
 import hmac
 
 from flask import Blueprint, request, abort, jsonify, current_app
-from issuebot.api.gitlab import GitlabAPI
+from issuebot.api.gitlab_api import GitlabAPI
 
 github_hook = Blueprint("github_hook", __name__)
 
@@ -48,7 +48,7 @@ def index():
 
 
 def manage_issues(data: dict) -> dict:
-    """Manage github issues"""
+    """Manage github issues received from GitLab's API."""
     gl = GitlabAPI()
     response = {"status": "issues skipped"}
 
@@ -60,24 +60,15 @@ def manage_issues(data: dict) -> dict:
     project = gl.get_project_from_name(repo_name)
 
     if project:
-        issue = gl.get_issue_from_title(project, issue_dict["title"])
+        issue = project.get_issue_from_title(issue_dict["title"])
         if action == "opened" and not issue:
-            project.issues.create(
-                {
-                    "title": issue_dict["title"],
-                    "description": "<br>".join(
-                        [issue_dict["html_url"], issue_dict["body"]]
-                    ),
-                }
-            )
+            project.create_issue(issue_dict["title"], issue_dict["body"])
             response["status"] = "done"
         elif action == "reopened" and issue:
-            issue.state_event = "reopen"
-            issue.save()
+            issue.state = "reopen"
             response["status"] = "done"
         elif action == "closed" and issue:
-            issue.state_event = "close"
-            issue.save()
+            issue.state = "close"
             response["status"] = "done"
 
     return response
@@ -97,26 +88,21 @@ def manage_issue_comment(data: dict) -> dict:
     project = gl.get_project_from_name(repo_name)
 
     if project:
-        issue = gl.get_issue_from_title(project, issue_dict["title"])
+        issue = project.get_issue_from_title(issue_dict["title"])
 
         if issue:
-            comment_list = issue.discussions.list()
-            comment = None
-            content = "<br>".join(
-                [comment_dict["html_url"], comment_dict["body"]]
-            )
+            content = comment_dict["body"]
+            if "body" in data.get("changes", {}):
+                content = data["changes"]["body"]["from"]
 
-            for comment in comment_list:
-                for note in comment.attributes["notes"]:
-                    if note["body"].startswith(comment_dict["html_url"]):
-                        comment = comment.notes.get(note["id"])
+            comment = issue.get_comment_from_body(content)
 
             if action == "created" and not comment:
-                issue.discussions.create({"body": content})
+                issue.create_comment(comment_dict["body"])
                 response["status"] = "done"
             elif action == "edited" and comment:
-                comment.body = content
-                comment.save()
+
+                comment.body = comment_dict["body"]
                 response["status"] = "done"
             elif action == "deleted" and comment:
                 comment.delete()
