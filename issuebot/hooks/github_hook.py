@@ -1,15 +1,34 @@
-import os
-import hmac
+# Issuebot
+# Copyright (C) 2020  Anybox
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from flask import Blueprint, request, abort, jsonify, current_app
-from issuebot.api.gitlab_api import GitlabAPI
+import hmac
+from urllib.parse import urlparse
+
+from flask import Blueprint, abort, current_app, jsonify, request
 
 github_hook = Blueprint("github_hook", __name__)
 
 
 @github_hook.before_request
 def check_validity():
-    secret = os.environ.get("GITHUB_HOOK_SECRET")
+    """Check secret and headers validity or raise an error."""
+    hooks = current_app.config["hooks"]
+    endpoint = request.url_rule.rule
+    secret = hooks[endpoint]
+
     header_sign = request.headers.get("X-Hub-Signature")
     if not header_sign:
         current_app.logger.warning("No header sign")
@@ -48,64 +67,77 @@ def index():
 
 
 def manage_issues(data: dict) -> dict:
-    """Manage github issues received from GitLab's API."""
-    gl = GitlabAPI()
-    response = {"status": "issues skipped"}
+    """Manage issues received."""
+    apis = current_app.config["apis"]
+    response = {}
+    for api in apis:
+        response[api.name] = {"status": "issues skipped"}
 
-    action = data["action"]
-    repo_dict = data["repository"]
-    issue_dict = data["issue"]
+        action = data["action"]
+        repo_dict = data["repository"]
+        issue_dict = data["issue"]
 
-    repo_name = repo_dict.get("full_name", "").split("/")[-1]
-    project = gl.get_project_from_name(repo_name)
+        repo_url = urlparse(repo_dict["html_url"])
+        api_url = urlparse(api.url)
+        if repo_url.hostname == api_url.hostname:
+            continue
 
-    if project:
-        issue = project.get_issue_from_title(issue_dict["title"])
-        if action == "opened" and not issue:
-            project.create_issue(issue_dict["title"], issue_dict["body"])
-            response["status"] = "done"
-        elif action == "reopened" and issue:
-            issue.state = "reopen"
-            response["status"] = "done"
-        elif action == "closed" and issue:
-            issue.state = "close"
-            response["status"] = "done"
+        repo_name = repo_dict.get("full_name", "").split("/")[-1]
+        project = api.get_project_from_name(repo_name)
+
+        if project:
+            issue = project.get_issue_from_title(issue_dict["title"])
+            if action == "opened" and not issue:
+                project.create_issue(issue_dict["title"], issue_dict["body"])
+                response[api.name]["status"] = "done"
+            elif action == "reopened" and issue:
+                issue.state = "reopen"
+                response[api.name]["status"] = "done"
+            elif action == "closed" and issue:
+                issue.state = "close"
+                response[api.name]["status"] = "done"
 
     return response
 
 
 def manage_issue_comment(data: dict) -> dict:
-    """Manage issue comments"""
-    gl = GitlabAPI()
-    response = {"status": "issue comment skipped"}
+    """Manage issue comments."""
+    apis = current_app.config["apis"]
+    response = {}
+    for api in apis:
+        response[api.name] = {"status": "issue comment skipped"}
 
-    action = data["action"]
-    repo_dict = data["repository"]
-    issue_dict = data["issue"]
-    comment_dict = data["comment"]
+        action = data["action"]
+        repo_dict = data["repository"]
+        issue_dict = data["issue"]
+        comment_dict = data["comment"]
 
-    repo_name = repo_dict.get("full_name", "").split("/")[-1]
-    project = gl.get_project_from_name(repo_name)
+        repo_url = urlparse(repo_dict["html_url"])
+        api_url = urlparse(api.url)
+        if repo_url.hostname == api_url.hostname:
+            continue
 
-    if project:
-        issue = project.get_issue_from_title(issue_dict["title"])
+        repo_name = repo_dict.get("full_name", "").split("/")[-1]
+        project = api.get_project_from_name(repo_name)
 
-        if issue:
-            content = comment_dict["body"]
-            if "body" in data.get("changes", {}):
-                content = data["changes"]["body"]["from"]
+        if project:
+            issue = project.get_issue_from_title(issue_dict["title"])
 
-            comment = issue.get_comment_from_body(content)
+            if issue:
+                content = comment_dict["body"]
+                if "body" in data.get("changes", {}):
+                    content = data["changes"]["body"]["from"]
 
-            if action == "created" and not comment:
-                issue.create_comment(comment_dict["body"])
-                response["status"] = "done"
-            elif action == "edited" and comment:
+                comment = issue.get_comment_from_body(content)
 
-                comment.body = comment_dict["body"]
-                response["status"] = "done"
-            elif action == "deleted" and comment:
-                comment.delete()
-                response["status"] = "done"
+                if action == "created" and not comment:
+                    issue.create_comment(comment_dict["body"])
+                    response[api.name]["status"] = "done"
+                elif action == "edited" and comment:
+                    comment.body = comment_dict["body"]
+                    response[api.name]["status"] = "done"
+                elif action == "deleted" and comment:
+                    comment.delete()
+                    response[api.name]["status"] = "done"
 
     return response
