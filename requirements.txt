@@ -12,3 +12,4 @@ python-ldap
 # forge
 python-gitlab
 pygithub
+gunicorn
