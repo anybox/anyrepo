@@ -1,7 +1,7 @@
 version: '3.7'
 
 services:
-  issuebot:
+  anyrepo:
     image: ${IMAGE}:${COMMIT_TAG}
     deploy:
       replicas: 1
@@ -9,8 +9,8 @@ services:
         constraints:
           - node.role == worker
         labels:
-          traefik.port: "8080"
-          traefik.backend: "issuebot"
+          traefik.port: "8888"
+          traefik.backend: "anyrepo"
           traefik.domain.network: "traefik_traefik-net"
           traefik.frontend.rule: "Host:${DNS_STAGING}"
       networks:
