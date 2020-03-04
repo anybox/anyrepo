@@ -1,4 +1,4 @@
-# Issuebot
+# AnyRepo
 # Copyright (C) 2020  Anybox
 #
 # This program is free software: you can redistribute it and/or modify
@@ -20,10 +20,10 @@ import os
 import toml
 from flask import Flask
 
-from issuebot.api.github_api import GithubAPI
-from issuebot.api.gitlab_api import GitlabAPI
-from issuebot.hooks.github_hook import github_hook
-from issuebot.hooks.gitlab_hook import gitlab_hook
+from anyrepo.api.github_api import GithubAPI
+from anyrepo.api.gitlab_api import GitlabAPI
+from anyrepo.hooks.github_hook import github_hook
+from anyrepo.hooks.gitlab_hook import gitlab_hook
 
 
 class ConfigError(Exception):
@@ -36,7 +36,7 @@ def create_app():
 
     # config
     configfile = os.environ.get(
-        "ISSUEBOT_CONFIG", "/usr/local/share/issuebot/config.toml"
+        "ANYREPO_CONFIG", "/usr/local/share/anyrepo/config.toml"
     )
     if not os.path.isfile(configfile):
         raise ConfigError("Config file not found")
@@ -46,7 +46,7 @@ def create_app():
     except toml.decoder.TomlDecodeError:
         raise ConfigError("Config file must be a valid TOML file")
 
-    app.config.update(config.get("issuebot", {}))
+    app.config.update(config.get("anyrepo", {}))
 
     # logs
     level = app.config.get("loglevel", "INFO")

@@ -1,4 +1,4 @@
-# Issuebot
+# AnyRepo
 # Copyright (C) 2020  Anybox
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 from collections import namedtuple
 from unittest.mock import MagicMock, patch
 
-from issuebot.api.gitlab_api import (
+from anyrepo.api.gitlab_api import (
     GitlabAPI,
     GitlabComment,
     GitlabIssue,

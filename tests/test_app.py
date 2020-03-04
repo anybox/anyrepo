@@ -1,4 +1,4 @@
-# Issuebot
+# AnyRepo
 # Copyright (C) 2020  Anybox
 #
 # This program is free software: you can redistribute it and/or modify
@@ -19,9 +19,9 @@ import os
 import pytest
 import toml
 
-from issuebot import ConfigError, create_app
-from issuebot.api.github_api import GithubAPI
-from issuebot.api.gitlab_api import GitlabAPI
+from anyrepo import ConfigError, create_app
+from anyrepo.api.github_api import GithubAPI
+from anyrepo.api.gitlab_api import GitlabAPI
 
 
 def test_no_config_file(confpath):

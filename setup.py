@@ -1,4 +1,4 @@
-# Issuebot
+# AnyRepo
 # Copyright (C) 2020  Anybox
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@ with open("requirements.txt", "r") as fi:
 
 
 setup(
-    name="issuebot",
+    name="anyrepo",
     version="1.0",
     long_description=__doc__,
     packages=find_packages(),

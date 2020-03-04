@@ -1,4 +1,4 @@
-# Issuebot
+# AnyRepo
 # Copyright (C) 2020  Anybox
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@ import toml
 from flask import Flask
 from flask.testing import FlaskClient
 
-from issuebot import create_app
+from anyrepo import create_app
 
 path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "test.toml")
 
@@ -34,7 +34,7 @@ pytest_plugins = [
 
 
 def pytest_generate_tests(metafunc):
-    os.environ["ISSUEBOT_CONFIG"] = path
+    os.environ["ANYREPO_CONFIG"] = path
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def confpath() -> str:
 @pytest.fixture
 def config(confpath: str) -> Iterator[MutableMapping[str, Any]]:
     data_ = """
-[issuebot]
+[anyrepo]
 debug = true
 port = 5000
 host = "0.0.0.0"

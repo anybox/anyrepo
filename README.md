@@ -1,4 +1,4 @@
-# Issuebot
+# AnyRepo
 
 ![](./logo.png)
 

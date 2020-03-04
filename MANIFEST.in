@@ -1,2 +1,2 @@
-recursive-include issuebot/templates *
-recursive-include issuebot/static *
+recursive-include anyrepo/templates *
+recursive-include anyrepo/static *
