@@ -1,4 +1,4 @@
-# Issuebot
+# AnyRepo
 # Copyright (C) 2020  Anybox
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@ from typing import Optional
 
 import github
 
-from issuebot.api import API, Comment, Issue, Project
+from anyrepo.api import API, Comment, Issue, Project
 
 
 class GithubAPI(API):
