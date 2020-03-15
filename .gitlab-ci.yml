@@ -33,7 +33,7 @@ build_staging:
     - docker pull $IMAGE:$CI_COMMIT_REF_NAME || true
     - |-
         docker build --cache-from $IMAGE:$CI_COMMIT_REF_NAME \
-            --build-arg CONFIG="$CONFIG_STAGING"
+            --build-arg CONFIG="$CONFIG_STAGING" \
             --tag $IMAGE:$COMMIT_TAG \
             --tag "$IMAGE:$CI_COMMIT_REF_NAME" .
     - docker push "$IMAGE:$COMMIT_TAG"
