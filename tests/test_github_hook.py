@@ -16,6 +16,9 @@
 
 import hmac
 import json
+from unittest.mock import patch
+
+from anyrepo.models.log import Log
 
 
 def regenerate_headers_hash_from_data(secret: bytes, data: str) -> str:
@@ -67,9 +70,37 @@ def test_unknown_event(client, gh_headers):
     assert data["status"] == "skipped"
 
 
-def test_message_dispatch(
-    client, api, gh_headers, gh_secret, new_gh_issue_str
+def test_wrong_data(
+    app, client, gh_headers, gh_secret, new_gh_issue_str, github_hook
 ):
+    with app.app_context():
+        data_dict = json.loads(new_gh_issue_str)
+        del data_dict["action"]
+        data = json.dumps(data_dict)
+        hook_log_count = Log.query.filter_by(hook_id=github_hook.id).count()
+
+        gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
+            gh_secret, data
+        )
+        gh_headers["HTTP_X_GITHUB_EVENT"] = "issues"
+        response = client.post(
+            "/github/",
+            data=data,
+            content_type="application/json",
+            environ_base=gh_headers,
+        )
+
+        json_data = response.get_json()
+        new_count = Log.query.filter_by(hook_id=github_hook.id).count()
+        assert json_data == {"status": "error"}
+        assert new_count > hook_log_count
+
+
+@patch("anyrepo.models.api.ApiModel.get_client")
+def test_message_dispatch(
+    get_client, client, api, dbapi, gh_headers, gh_secret, new_gh_issue_str
+):
+    get_client.return_value = api
     data = new_gh_issue_str
     gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
         gh_secret, data
@@ -89,9 +120,18 @@ def test_message_dispatch(
     assert json_data["FakeAPI"] == {"status": "issues skipped"}
 
 
+@patch("anyrepo.models.api.ApiModel.get_client")
 def test_create_issue(
-    client, api, project, gh_secret, gh_headers, new_gh_issue_str
+    get_client,
+    client,
+    api,
+    dbapi,
+    project,
+    gh_secret,
+    gh_headers,
+    new_gh_issue_str,
 ):
+    get_client.return_value = api
     data = new_gh_issue_str
     gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
         gh_secret, data
@@ -114,9 +154,44 @@ def test_create_issue(
     assert json_data["FakeAPI"] == {"status": "done"}
 
 
-def test_issues_api_with_same_url(
-    client, api, gh_headers, gh_secret, new_gh_issue_str
+@patch("anyrepo.models.api.ApiModel.get_client")
+def test_create_issue_error(
+    get_client,
+    client,
+    dbapi,
+    project,
+    gh_secret,
+    gh_headers,
+    new_gh_issue_str,
 ):
+    api = get_client.return_value
+    api.get_project_from_name.side_effect = Exception("test")
+    api_log_count = Log.query.filter_by(api_id=dbapi.id).count()
+    data = new_gh_issue_str
+    gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
+        gh_secret, data
+    )
+    gh_headers["HTTP_X_GITHUB_EVENT"] = "issues"
+    response = client.post(
+        "/github/",
+        data=data,
+        content_type="application/json",
+        environ_base=gh_headers,
+    )
+
+    json_data = response.get_json()
+
+    new_count = Log.query.filter_by(api_id=dbapi.id).count()
+    assert "FakeAPI" in json_data
+    assert json_data["FakeAPI"] == {"status": "error"}
+    assert new_count > api_log_count
+
+
+@patch("anyrepo.models.api.ApiModel.get_client")
+def test_issues_api_with_same_url(
+    get_client, client, api, dbapi, gh_headers, gh_secret, new_gh_issue_str
+):
+    get_client.return_value = api
     data = new_gh_issue_str
     gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
         gh_secret, data
@@ -132,16 +207,21 @@ def test_issues_api_with_same_url(
         environ_base=gh_headers,
     )
 
-    json_data = response.get_json()
-
     assert response.status_code == 200
-    assert "FakeAPI" in json_data
-    assert json_data["FakeAPI"] == {"status": "issues skipped"}
 
 
+@patch("anyrepo.models.api.ApiModel.get_client")
 def test_repoen_issue(
-    client, api, gh_secret, gh_headers, reopened_gh_issue_str, issue
+    get_client,
+    client,
+    api,
+    dbapi,
+    gh_secret,
+    gh_headers,
+    reopened_gh_issue_str,
+    issue,
 ):
+    get_client.return_value = api
     data = reopened_gh_issue_str
     gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
         gh_secret, data
@@ -163,9 +243,18 @@ def test_repoen_issue(
     assert issue.state == "reopen"
 
 
+@patch("anyrepo.models.api.ApiModel.get_client")
 def test_close_issue(
-    client, api, gh_secret, gh_headers, closed_gh_issue_str, issue
+    get_client,
+    client,
+    api,
+    dbapi,
+    gh_secret,
+    gh_headers,
+    closed_gh_issue_str,
+    issue,
 ):
+    get_client.return_value = api
     data = closed_gh_issue_str
     gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
         gh_secret, data
@@ -187,9 +276,18 @@ def test_close_issue(
     assert issue.state == "close"
 
 
+@patch("anyrepo.models.api.ApiModel.get_client")
 def test_create_comment(
-    client, api, gh_secret, gh_headers, new_gh_issue_comment_str, issue
+    get_client,
+    client,
+    api,
+    dbapi,
+    gh_secret,
+    gh_headers,
+    new_gh_issue_comment_str,
+    issue,
 ):
+    get_client.return_value = api
     data = new_gh_issue_comment_str
     gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
         gh_secret, data
@@ -212,9 +310,45 @@ def test_create_comment(
     assert json_data["FakeAPI"] == {"status": "done"}
 
 
-def test_edit_comment(
-    api, client, gh_secret, gh_headers, edited_gh_issue_comment_str, comment
+@patch("anyrepo.models.api.ApiModel.get_client")
+def test_create_comment_error(
+    get_client, client, dbapi, gh_secret, gh_headers, new_gh_issue_comment_str,
 ):
+    api = get_client.return_value
+    api.get_project_from_name.side_effect = Exception("test")
+    api_log_count = Log.query.filter_by(api_id=dbapi.id).count()
+    data = new_gh_issue_comment_str
+    gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
+        gh_secret, data
+    )
+    gh_headers["HTTP_X_GITHUB_EVENT"] = "issue_comment"
+    response = client.post(
+        "/github/",
+        data=data,
+        content_type="application/json",
+        environ_base=gh_headers,
+    )
+
+    json_data = response.get_json()
+    new_log_count = Log.query.filter_by(api_id=dbapi.id).count()
+
+    assert "FakeAPI" in json_data
+    assert json_data["FakeAPI"] == {"status": "error"}
+    assert new_log_count > api_log_count
+
+
+@patch("anyrepo.models.api.ApiModel.get_client")
+def test_edit_comment(
+    get_client,
+    api,
+    dbapi,
+    client,
+    gh_secret,
+    gh_headers,
+    edited_gh_issue_comment_str,
+    comment,
+):
+    get_client.return_value = api
     data = json.loads(edited_gh_issue_comment_str)
     data["changes"] = {"body": {"from": data["comment"]["body"]}}
     data["comment"]["body"] = "New value"
@@ -240,9 +374,18 @@ def test_edit_comment(
     assert comment.body == "New value"
 
 
+@patch("anyrepo.models.api.ApiModel.get_client")
 def test_delete_comment(
-    api, client, gh_secret, gh_headers, deleted_gh_issue_comment_str, comment
+    get_client,
+    api,
+    dbapi,
+    client,
+    gh_secret,
+    gh_headers,
+    deleted_gh_issue_comment_str,
+    comment,
 ):
+    get_client.return_value = api
     data = deleted_gh_issue_comment_str
     gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
         gh_secret, data
@@ -264,9 +407,17 @@ def test_delete_comment(
     assert json_data["FakeAPI"] == {"status": "done"}
 
 
+@patch("anyrepo.models.api.ApiModel.get_client")
 def test_comment_api_with_same_url(
-    client, api, gh_secret, gh_headers, new_gh_issue_comment_str
+    get_client,
+    client,
+    api,
+    dbapi,
+    gh_secret,
+    gh_headers,
+    new_gh_issue_comment_str,
 ):
+    get_client.return_value = api
     data = new_gh_issue_comment_str
     gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
         gh_secret, data
@@ -282,8 +433,4 @@ def test_comment_api_with_same_url(
         environ_base=gh_headers,
     )
 
-    json_data = response.get_json()
-
     assert response.status_code == 200
-    assert "FakeAPI" in json_data
-    assert json_data["FakeAPI"] == {"status": "issue comment skipped"}

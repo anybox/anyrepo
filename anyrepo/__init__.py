@@ -20,14 +20,16 @@ import os
 import toml
 from flask import Flask
 
-from anyrepo.api.github_api import GithubAPI
-from anyrepo.api.gitlab_api import GitlabAPI
-from anyrepo.hooks.github_hook import github_hook
-from anyrepo.hooks.gitlab_hook import gitlab_hook
-
-
-class ConfigError(Exception):
-    pass
+from anyrepo.config import (
+    ConfigError,
+    check_config,
+    parse_config_apis,
+    parse_config_hooks,
+    parse_config_users,
+)
+from anyrepo.logger import SQLAlchemyHandler, SQLAlchemyLoggerFormatter
+from anyrepo.models import db
+from anyrepo.views import admin, login_manager
 
 
 def create_app():
@@ -38,7 +40,8 @@ def create_app():
     configfile = os.environ.get(
         "ANYREPO_CONFIG", "/usr/local/share/anyrepo/config.toml"
     )
-    if not os.path.isfile(configfile):
+
+    if not os.path.exists(configfile):
         raise ConfigError("Config file not found")
 
     try:
@@ -46,46 +49,33 @@ def create_app():
     except toml.decoder.TomlDecodeError:
         raise ConfigError("Config file must be a valid TOML file")
 
-    app.config.update(config.get("anyrepo", {}))
+    anyrepoconfig = config.get("anyrepo", {})
+    converted_config = {k.upper(): v for k, v in anyrepoconfig.items()}
+
+    app.config.update(converted_config)
+    db.init_app(app)
+    login_manager.init_app(app)
+
+    with app.app_context():
+        db.create_all()
 
     # logs
-    level = app.config.get("loglevel", "INFO")
+    level = app.config.get("LOGLEVEL", "INFO")
     app.logger.setLevel(getattr(logging, level))
+    handler = SQLAlchemyHandler()
+    formatter = SQLAlchemyLoggerFormatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    handler.setLevel(getattr(logging, level))
+    handler.setFormatter(formatter)
+    app.logger.addHandler(handler)
 
-    # blueprints
-    try:
-        app.config["hooks"] = {}
-        hooks = config.get("hook", {})
-        for _, hook in hooks.items():
-            endpoint = hook["endpoint"]
-            if hook["type"] == "github":
-                app.register_blueprint(github_hook, url_prefix=endpoint)
-            elif hook["type"] == "gitlab":
-                app.register_blueprint(gitlab_hook, url_prefix=endpoint)
-            app.config["hooks"][endpoint] = hook["secret"]
-            app.logger.info(
-                f"Registered a blueprint for a {hook['type']} at "
-                + f"{hook['endpoint']}"
-            )
-    except KeyError as err:
-        msg = "Invalid hook part in config file"
-        raise ConfigError(msg) from err
-
-    # apis
-    try:
-        app.config["apis"] = []
-        apis = config.get("api", {})
-        for name, api in apis.items():
-            if api["type"] == "github":
-                app.config["apis"].append(
-                    GithubAPI(name, api.get("url"), api["token"])
-                )
-            elif api["type"] == "gitlab":
-                app.config["apis"].append(
-                    GitlabAPI(name, api.get("url"), api["token"])
-                )
-    except KeyError as err:
-        msg = "Invalid api part in config file"
-        raise ConfigError(msg) from err
+    # admin
+    app.register_blueprint(admin)
+    with app.app_context():
+        check_config(app)
+        parse_config_apis(config, app, db)
+        parse_config_hooks(config, app, db)
+        parse_config_users(config, app, db)
 
     return app

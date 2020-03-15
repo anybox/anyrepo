@@ -16,7 +16,10 @@
 
 from urllib.parse import urlparse
 
-from flask import Blueprint, abort, current_app, jsonify, request
+from flask import Blueprint, abort, current_app, g, jsonify, request
+
+from anyrepo.models.api import ApiModel
+from anyrepo.models.hook import HookModel
 
 gitlab_hook = Blueprint("gitlab_hook", __name__)
 
@@ -24,17 +27,18 @@ gitlab_hook = Blueprint("gitlab_hook", __name__)
 @gitlab_hook.before_request
 def check_validity():
     """Check secret and headers validity or raise an error."""
-    hooks = current_app.config["hooks"]
     endpoint = request.url_rule.rule
-    secret = hooks[endpoint]
+    hook = HookModel.query.filter_by(endpoint=endpoint).first_or_404()
+    secret = hook.get_secret()
+    g.hook = hook
 
     header_sign = request.headers.get("X-Gitlab-Token")
     if not header_sign:
-        current_app.logger.warning("No header sign")
+        current_app.logger.error("No header sign", {"hook_id": hook.id})
         abort(403)
 
     if secret != header_sign:
-        current_app.logger.warning("Invalid secret")
+        current_app.logger.error("Invalid secret", {"hook_id": hook.id})
         abort(403)
 
 
@@ -43,49 +47,57 @@ def index():
     data = request.get_json()
     event_type = request.headers.get("X-Gitlab-Event", "ping")
 
-    response = {"status": "skipped"}
-    if event_type == "ping":
-        response = {"msg": "pong"}
-    elif event_type == "Issue Hook":
-        response = manage_issues(data)
-    elif event_type == "Note Hook":
-        response = manage_issue_comment(data)
+    try:
+        response = {"status": "skipped"}
+        if event_type == "ping":
+            response = {"msg": "pong"}
+        elif event_type == "Issue Hook":
+            response = manage_issues(data)
+        elif event_type == "Note Hook":
+            response = manage_issue_comment(data)
+    except Exception as err:
+        current_app.logger.error(str(err), {"hook_id": g.hook.id})
+        response = {"status": "error"}
 
     return jsonify(response)
 
 
 def manage_issues(data: dict) -> dict:
     """Manage issues."""
-    apis = current_app.config["apis"]
+    action = data["object_attributes"]["state"]
+    project_dict = data["project"]
+    issue_dict = data["object_attributes"]
+    repo_name = project_dict.get("path_with_namespace", "").split("/")[-1]
+    repo_url = urlparse(project_dict["git_http_url"])
+
+    apidb = ApiModel.query.all()
+    apis = [
+        api for api in apidb if urlparse(api.url).hostname != repo_url.hostname
+    ]
+
     response = {}
     for api in apis:
+        client = api.get_client()
         response[api.name] = {"status": "issues skipped"}
+        try:
+            project = client.get_project_from_name(repo_name)
+            if project:
+                issue = project.get_issue_from_title(issue_dict["title"])
 
-        action = data["object_attributes"]["state"]
-        project_dict = data["project"]
-        issue_dict = data["object_attributes"]
-
-        repo_url = urlparse(project_dict["git_http_url"])
-        api_url = urlparse(api.url)
-        if repo_url.hostname == api_url.hostname:
-            continue
-
-        repo_name = project_dict.get("path_with_namespace", "").split("/")[-1]
-        project = api.get_project_from_name(repo_name)
-        if project:
-            issue = project.get_issue_from_title(issue_dict["title"])
-
-            if action == "opened" and not issue:
-                project.create_issue(
-                    issue_dict["title"], issue_dict["description"]
-                )
-                response[api.name]["status"] = "done"
-            elif action == "opened" and issue:
-                issue.state = "opened"
-                response[api.name]["status"] = "done"
-            elif action == "closed" and issue:
-                issue.state = "closed"
-                response[api.name]["status"] = "done"
+                if action == "opened" and not issue:
+                    project.create_issue(
+                        issue_dict["title"], issue_dict["description"]
+                    )
+                    response[api.name]["status"] = "done"
+                elif action == "opened" and issue:
+                    issue.state = "opened"
+                    response[api.name]["status"] = "done"
+                elif action == "closed" and issue:
+                    issue.state = "closed"
+                    response[api.name]["status"] = "done"
+        except Exception as err:
+            current_app.logger.error(str(err), {"api_id": api.id})
+            response[api.name] = {"status": "error"}
 
     return response
 
@@ -94,30 +106,33 @@ def manage_issue_comment(data: dict) -> dict:
     """Manage issue comments.
     :NB: Only created action is managed by Gitlab Webhook for now
     """
-    apis = current_app.config["apis"]
+    project_dict = data["project"]
+    issue_dict = data["issue"]
+    comment_dict = data["object_attributes"]
+    repo_url = urlparse(project_dict["git_http_url"])
+    repo_name = project_dict.get("path_with_namespace", "").split("/")[-1]
+
+    apidb = ApiModel.query.all()
+    apis = [
+        api for api in apidb if urlparse(api.url).hostname != repo_url.hostname
+    ]
+
     response = {}
     for api in apis:
-        response[api.name] = {"status": "issue comment skipped"}
+        client = api.get_client()
+        response[api.name] = {"status": "issue comments skipped"}
+        try:
+            project = client.get_project_from_name(repo_name)
+            if project:
+                issue = project.get_issue_from_title(issue_dict["title"])
 
-        project_dict = data["project"]
-        issue_dict = data["issue"]
-        comment_dict = data["object_attributes"]
-
-        repo_url = urlparse(project_dict["git_http_url"])
-        api_url = urlparse(api.url)
-        if repo_url.hostname == api_url.hostname:
-            continue
-
-        repo_name = project_dict.get("path_with_namespace", "").split("/")[-1]
-        project = api.get_project_from_name(repo_name)
-
-        if project:
-            issue = project.get_issue_from_title(issue_dict["title"])
-
-            if issue:
-                comment = issue.get_comment_from_body(comment_dict["note"])
-                if comment is None:
-                    issue.create_comment(comment_dict["note"])
-                    response[api.name]["status"] = "done"
+                if issue:
+                    comment = issue.get_comment_from_body(comment_dict["note"])
+                    if comment is None:
+                        issue.create_comment(comment_dict["note"])
+                        response[api.name]["status"] = "done"
+        except Exception as err:
+            current_app.logger.error(str(err), {"api_id": api.id})
+            response[api.name] = {"status": "error"}
 
     return response

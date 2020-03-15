@@ -51,15 +51,8 @@ class FakeComment:
 
 
 @patch("github.Github")
-def test_create_api_without_url(github_patched):
-    api_ = GithubAPI("github", None, "mytoken")
-    assert github_patched.called_with("mytoken")
-    assert api_.url == "https://github.com"
-
-
-@patch("github.Github")
 def test_create_api(github_patched):
-    api_ = GithubAPI("github", "http://github.mycompany.com", "mytoken")
+    api_ = GithubAPI("http://github.mycompany.com", "mytoken")
     assert github_patched.called_with(
         {
             "base_url": "http://github.mycompany.com",
@@ -73,7 +66,7 @@ def test_create_api(github_patched):
 def test_get_repo_empty(user_patched):
     user_patched.get_repos.return_value = []
 
-    api_ = GithubAPI("github", None, "mytoken")
+    api_ = GithubAPI("https://github.com", "mytoken")
     api_._user = user_patched
     res = api_.get_project_from_name("test")
     assert res is None
@@ -83,7 +76,7 @@ def test_get_repo_empty(user_patched):
 def test_get_repo(user_patched):
     user_patched.get_repos.return_value = [Repo(name="test")]
 
-    api_ = GithubAPI("github", None, "mytoken")
+    api_ = GithubAPI("https://github.com", "mytoken")
     api_._user = user_patched
     res = api_.get_project_from_name("test")
     assert res is not None
@@ -94,7 +87,7 @@ def test_get_repo(user_patched):
 def test_get_repo_not_found(user_patched):
     user_patched.get_repos.return_value = [Repo(name="test2")]
 
-    api_ = GithubAPI("github", None, "mytoken")
+    api_ = GithubAPI("https://github.com", "mytoken")
     api_._user = user_patched
     res = api_.get_project_from_name("test")
     assert res is None

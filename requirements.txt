@@ -1,4 +1,14 @@
+# flask based
 flask
-python-gitlab
+flask-sqlalchemy
+flask-wtf
+flask-login
+
+# utils
+cryptography
 toml
+python-ldap
+
+# forge
+python-gitlab
 pygithub

@@ -51,14 +51,14 @@ class FakeComment:
 
 @patch("gitlab.Gitlab")
 def test_create_api_without_url(gitlab_patched):
-    api_ = GitlabAPI("gitlab", None, "mytoken")
+    api_ = GitlabAPI("https://gitlab.com/", "mytoken")
     assert gitlab_patched.called_with("https://gitlab.com/", "mytoken")
     assert api_.url == "https://gitlab.com/"
 
 
 @patch("gitlab.Gitlab")
 def test_create_api(gitlab_patched):
-    api_ = GitlabAPI("gitlab", "http://gitlab.mycompany.com", "mytoken")
+    api_ = GitlabAPI("http://gitlab.mycompany.com", "mytoken")
     assert gitlab_patched.called_with("http://gitlab.mycompany.com", "mytoken")
     assert api_.url == "http://gitlab.mycompany.com"
 
@@ -67,7 +67,7 @@ def test_create_api(gitlab_patched):
 def test_get_repo_empty(gitlab_patched):
     gitlab_patched.projects.list.return_value = []
 
-    api_ = GitlabAPI("gitlab", None, "mytoken")
+    api_ = GitlabAPI("https://gitlab.com/", "mytoken")
     res = api_.get_project_from_name("test")
     assert res is None
     assert gitlab_patched.projects.list.called_with({"search": "test"})
@@ -75,7 +75,7 @@ def test_get_repo_empty(gitlab_patched):
 
 @patch("gitlab.Gitlab")
 def test_get_repo(gitlab_patched):
-    api_ = GitlabAPI("gitlab", None, "mytoken")
+    api_ = GitlabAPI("https://gitlab.com/", "mytoken")
     api_._client.projects.list = MagicMock()
     api_._client.projects.list.return_value = [Repo(name="test")]
 

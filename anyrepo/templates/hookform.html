@@ -1,0 +1,23 @@
+{# -*- engine: django -*- #}
+{% extends "base.html" %}
+
+{% block content %}
+  <header>
+    <h1>Hook {{ hook.endpoint }}</h1>
+  </header>
+  <div class="box">
+    <div class="flex vcenter">
+      <p class="label marginless">Endpoint</p>
+      <p class="marginless">{{ hostname }}{{ hook.endpoint }}</p>
+    </div>
+    <div class="flex vcenter">
+      <p class="label marginless">Type</p>
+      <p class="marginless">{{ hook.hook_type.value }}</p>
+    </div>
+    <form action="{{ url_for('admin.hook_edit', hookuuid=hook.slug) }}" method="POST">
+      {{ form.hidden_tag() }}
+      <div>{{ form.secret.label }} {{ form.secret() }}</div>
+      <button type="submit" class="btn fullwidth">Submit</button>
+    </form>
+  </div>
+{% endblock %}

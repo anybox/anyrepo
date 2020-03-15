@@ -24,13 +24,9 @@ from anyrepo.api import API, Comment, Issue, Project
 class GithubAPI(API):
     """Github client wrapper."""
 
-    def __init__(self, name: str, url: Optional[str], token: str):
-        super().__init__(name, url, token)
-        if url:
-            self._client = github.Github(base_url=url, login_or_token=token)
-        else:
-            self.url = "https://github.com"
-            self._client = github.Github(token)
+    def __init__(self, url: str, token: str):
+        super().__init__(url, token)
+        self._client = github.Github(base_url=url, login_or_token=token)
         self._user = self._client.get_user()
 
     def get_project_from_name(self, name: str) -> Optional[Project]:

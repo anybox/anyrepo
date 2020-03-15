@@ -1,7 +1,8 @@
 unit-tests:
   stage: test
-  image: python:3.8
+  image: python:3.8-alpine
   before_script:
+    - apk add -U build-base openldap-dev python3-dev libffi-dev libressl-dev
     - pip install -r requirements.txt
     - pip install pytest pytest-flask coverage
   script:
@@ -12,8 +13,9 @@ unit-tests:
 
 lint:
   stage: test
-  image: python:3.8
+  image: python:3.8-alpine
   before_script:
+    - apk add -U build-base git
     - pip install -U pip wheel pre-commit
     - pre-commit install --install-hooks
   script:

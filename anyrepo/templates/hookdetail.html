@@ -1,0 +1,35 @@
+{# -*- engine: django -*- #}
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="flex vcenter spacebetween">
+    <h1>Hook {{ hook.endpoint }}</h1>
+    <a class="button" href="{{ url_for('admin.hook_edit', hookuuid=hook.slug) }}">
+      <i class="fas fa-edit"></i>
+      Modify Hook
+    </a>
+  </header>
+  <div class="flex vcenter">
+    <p class="label marginless">Endpoint</p>
+    <p class="marginless">{{ hostname }}{{ hook.endpoint }}</p>
+  </div>
+  <div class="flex vcenter">
+    <p class="label marginless">Type</p>
+    <p class="marginless">{{ hook.hook_type.value }}</p>
+  </div>
+  <hr>
+  <strong>Last logs</strong>
+  <code class="logs">
+    {% if hook.logs|length == 0 %}
+      <p class="marginless">No logs</p>
+    {% else %}
+      {% for log in hook.logs %}
+        <div>
+          <span>{{ log.created_at }}</span>
+          <span>[{{ log.level }}]</span>
+          <span>{{ log.msg }}</span>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </code>
+{% endblock %}

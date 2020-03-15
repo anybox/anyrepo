@@ -25,10 +25,8 @@ from anyrepo.api import API, Comment, Issue, Project
 class GitlabAPI(API):
     """Wrapper for gitlab client."""
 
-    def __init__(self, name, url: Optional[str], token: str):
-        super().__init__(name, url, token)
-        if not url:
-            self.url = "https://gitlab.com/"
+    def __init__(self, url: str, token: str):
+        super().__init__(url, token)
         self._client = gitlab.Gitlab(self.url, private_token=token)
 
     def get_project_from_name(self, name: str) -> Optional[Project]:
