@@ -10,7 +10,7 @@ RUN apk add -U build-base \
         python3-dev \
         libffi-dev \
         libressl-dev \
-        postgresql-client
+        postgresql-dev
 RUN pip install -r /app/requirements.txt
 RUN pip install psycopg2
 
