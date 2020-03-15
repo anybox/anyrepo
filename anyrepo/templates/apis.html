@@ -1,0 +1,46 @@
+{# -*- engine: django -*- #}
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="flex vcenter spacebetween">
+    <h1>APIs</h1>
+    <a class="button" href="{{ url_for('admin.api_edit') }}">
+      <i class="fas fa-plus"></i>
+      Add a new API
+    </a>
+  </header>
+  {% if apis|length == 0 %}
+    <p align="center">No APIs registered</p>
+  {% else %}
+    <table class="fullwidth">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Url</th>
+          <th>Api Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for api in apis %}
+          <tr>
+            <td>
+              <a href="{{ url_for('admin.api_detail', apiuuid=api.slug )}}">
+                {{ api.name }}
+              </a>
+            </td>
+            <td>
+              <a href="{{ url_for('admin.api_detail', apiuuid=api.slug )}}">
+                {{ api.url }}
+              </a>
+            </td>
+            <td>
+              <a href="{{ url_for('admin.api_detail', apiuuid=api.slug )}}">
+                {{ api.api_type.value }}
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}

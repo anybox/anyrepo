@@ -1,0 +1,57 @@
+{# -*- engine: django -*- #}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Anyrepo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.css') }}">
+    <style lang="css">
+    header {
+      justify-content: center;
+      margin: 2em 0;
+    }
+    #logo {
+      max-height: 6em;
+      margin-right: 2em;
+    }
+    #login {
+      text-align: center;
+    }
+    </style>
+  </head>
+  <body>
+    <header class="flex vcenter">
+      <img src="{{ url_for('static', filename='logo.png') }}" id="logo" alt="logo">
+      <h1>Welcome to Anyrepo</h1>
+    </header>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flashes">
+          {% for category, message in messages %}
+            <li class="{{ category }}">
+              {% if category == 'error' %}
+                <i class="fas fa-times"></i>
+              {% elif category == 'success' %}
+                <i class="fas fa-check"></i>
+              {% else %}
+                <i class="fas fa-info"></i>
+              {% endif %}
+              {{ message }}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    <div class="box">
+      <form id="login" method="POST" action="{{ url_for('admin.login') }}" role="form">
+        {{ form.hidden_tag() }}
+        <div>{{ form.username.label }} {{ form.username() }}</div>
+        <div>{{ form.password.label }} {{ form.password() }}</div>
+        <button type="submit" class="btn">Submit</button>
+      </form>
+    </div>
+  </body>
+</html>

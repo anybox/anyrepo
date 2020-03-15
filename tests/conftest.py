@@ -20,10 +20,15 @@ from unittest.mock import MagicMock
 
 import pytest
 import toml
+from cryptography.fernet import Fernet
 from flask import Flask
 from flask.testing import FlaskClient
 
 from anyrepo import create_app
+from anyrepo.models import db
+from anyrepo.models.api import ApiModel, ApiType
+from anyrepo.models.hook import HookModel
+from anyrepo.models.user import User
 
 path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "test.toml")
 
@@ -38,17 +43,32 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.fixture
+def dbpath() -> Iterator[str]:
+    path = "/tmp/test.db"
+    yield f"sqlite:///{path}"
+    if os.path.exists(path):
+        os.remove(path)
+
+
+@pytest.fixture
 def confpath() -> str:
     return path
 
 
 @pytest.fixture
-def config(confpath: str) -> Iterator[MutableMapping[str, Any]]:
-    data_ = """
+def config(confpath: str, dbpath: str) -> Iterator[MutableMapping[str, Any]]:
+    data_ = f"""
 [anyrepo]
 debug = true
 port = 5000
 host = "0.0.0.0"
+secret_key = "{Fernet.generate_key().decode()}"
+sqlalchemy_database_uri = "{dbpath}"
+sqlalchemy_track_modifications = false
+wtf_csrf_enabled = false
+ldap_provider_url = "http://localhost"
+ldap_bind_format = "cr=Users,id={{username}}"
+login_disabled = true
 loglevel = "INFO"
 
 [api]
@@ -79,6 +99,12 @@ secret = "mysecret"
 endpoint = "/github/"
 type = "github"
 secret = "mysecondsecret"
+
+[users]
+
+[users.admin]
+username = "test"
+password = "test"
     """
     with open(confpath, "w") as fi:
         fi.write(data_)
@@ -96,8 +122,15 @@ def app(config: dict) -> Flask:
 
 
 @pytest.fixture
+def user(app: Flask):
+    with app.app_context():
+        user_ = User.query.filter_by(username="test").first()
+        return user_
+
+
+@pytest.fixture
 def client(app: Flask) -> Iterator[FlaskClient]:
-    """Returns a test client for our application"""
+    """Returns a test client for our application."""
     yield app.test_client()
 
 
@@ -161,12 +194,38 @@ def project(issue):
 @pytest.fixture
 def api(project, app: Flask):
     class API:
-        name = "FakeAPI"
-        url = "https://fakeapi.com"
-
         def get_project_from_name(self, name: str):
             return project
 
-    api_ = API()
-    app.config["apis"] = [api_]
-    return api_
+    return API()
+
+
+@pytest.fixture
+def dbapi(app: Flask) -> Iterator[ApiModel]:
+    with app.app_context():
+        ApiModel.query.delete()
+        dbapi_ = ApiModel(
+            name="FakeAPI", api_type=ApiType.GITHUB, url="https://fakeapi.com"
+        )
+        dbapi_.set_token("test")
+        db.session.add(dbapi_)
+        db.session.commit()
+
+        yield dbapi_
+
+        db.session.delete(dbapi_)
+        db.session.commit()
+
+
+@pytest.fixture
+def github_hook(app: Flask) -> HookModel:
+    with app.app_context():
+        hook_ = HookModel.query.filter_by(endpoint="/github/").first()
+        return hook_
+
+
+@pytest.fixture
+def gitlab_hook(app: Flask) -> HookModel:
+    with app.app_context():
+        hook_ = HookModel.query.filter_by(endpoint="/gitlab/").first()
+        return hook_

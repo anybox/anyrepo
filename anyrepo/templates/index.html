@@ -1,0 +1,28 @@
+{# -*- engine: django -*- #}
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>AnyRepo</h1>
+  <div>
+    <p>You have</p>
+    <ul>
+      <li>{{ apicount }} registered APIs</li>
+      <li>{{ hookcount }} registered Hooks</li>
+    </ul>
+  </div>
+  <hr>
+  <strong>Last logs</strong>
+  <code class="logs">
+    {% if logs|length == 0 %}
+      <p class="marginless">No logs</p>
+    {% else %}
+      {% for log in logs %}
+        <div>
+          <span>{{ log.created_at }}</span>
+          <span>[{{ log.level }}]</span>
+          <span>{{ log.msg }}</span>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </code>
+{% endblock %}

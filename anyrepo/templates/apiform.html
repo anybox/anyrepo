@@ -1,0 +1,24 @@
+{# -*- engine: django -*- #}
+{% extends "base.html" %}
+
+{% block content %}
+  <header>
+    <h1>
+      {% if api.id %}
+        API {{ api.name }}
+      {% else %}
+        New API
+      {% endif %}
+    </h1>
+  </header>
+  <div class="box">
+    <form action="{{ url_for('admin.api_edit') }}" method="POST">
+      {{ form.hidden_tag() }}
+      <div>{{ form.name.label }} {{ form.name() }}</div>
+      <div>{{ form.url.label }} {{ form.url() }}</div>
+      <div>{{ form.api_type.label }} {{ form.api_type(width=20) }}</div>
+      <div>{{ form.token.label }} {{ form.token() }}</div>
+      <button type="submit" class="btn fullwidth">Submit</button>
+    </form>
+  </div>
+{% endblock %}

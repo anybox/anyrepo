@@ -59,8 +59,7 @@ class Project(ABC):
 class API(ABC):
     """API wrapper."""
 
-    def __init__(self, name: str, url: Optional[str], token: str):
-        self.name = name
+    def __init__(self, url: str, token: str):
         self.url = url
         self.token = token
 
