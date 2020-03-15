@@ -37,6 +37,8 @@ build_staging:
             --tag $IMAGE:$COMMIT_TAG \
             --tag "$IMAGE:$CI_COMMIT_REF_NAME" .
     - docker push "$IMAGE:$COMMIT_TAG"
+  only:
+    - master
 
 deploy_staging:
   extends: .deployment
