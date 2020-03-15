@@ -28,7 +28,7 @@ lint:
 
 
 .deployment:
-  image: registry.anybox.cloud/infra/infra-cli:master
+  image: registry.anybox.cloud/infra/infra-cli:dev
   variables:
     IMAGE: "$CI_REGISTRY_IMAGE"
     COMMIT_TAG: "$CI_COMMIT_REF_NAME-$CI_COMMIT_SHA-$CI_PIPELINE_ID"
