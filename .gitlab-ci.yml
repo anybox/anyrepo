@@ -1,7 +1,6 @@
 stages:
   - test
   - build
-  # - doc
   - deploy
 
 unit-tests:
@@ -37,11 +36,9 @@ lint:
     - docker:18.09.7-dind
   before_script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $DOCKER_ENV_CI_REGISTRY
-  only:
-    - release
 
 
-build:
+build_staging:
   extends: .deployment
   stage: build
   script:
@@ -53,7 +50,7 @@ build:
             --tag "$IMAGE:$CI_COMMIT_REF_NAME" .
     - docker push "$IMAGE:$COMMIT_TAG"
 
-deploy:
+deploy_staging:
   extends: .deployment
   stage: deploy
   environment:
@@ -61,6 +58,7 @@ deploy:
     url: https://$DNS_STAGING
   script:
     - aws_cli create-dns-if-not-exists $DNS_STAGING staging
+    - aws_cli create-efs-directory $CI_PROJECT_PATH/$CI_ENVIRONMENT_NAME/db $CI_ENVIRONMENT_NAME
     - envsubst < docker-compose.staging.yml > docker-compose.yml
     - |-
           portainer_cli deploy-stack $PORTAINER_USER $PORTAINER_PASS \
