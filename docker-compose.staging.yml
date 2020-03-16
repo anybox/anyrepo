@@ -8,11 +8,11 @@ services:
       placement:
         constraints:
           - node.role == worker
-        labels:
-          traefik.port: "8888"
-          traefik.backend: "anyrepo"
-          traefik.domain.network: "traefik_traefik-net"
-          traefik.frontend.rule: "Host:${DNS_STAGING}"
+      labels:
+        traefik.port: "8888"
+        traefik.backend: "anyrepo"
+        traefik.domain.network: "traefik_traefik-net"
+        traefik.frontend.rule: "Host:${DNS_STAGING}"
     networks:
       - default
       - traefik_traefik-net
