@@ -1,6 +1,7 @@
 stages:
   - test
   - build
+  - pre-deploy
   - deploy
 
 unit-tests:
@@ -38,7 +39,7 @@ lint:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $DOCKER_ENV_CI_REGISTRY
 
 
-build_staging:
+STAGING-build:
   extends: .deployment
   stage: build
   script:
@@ -49,18 +50,26 @@ build_staging:
             --tag $IMAGE:$COMMIT_TAG \
             --tag "$IMAGE:$CI_COMMIT_REF_NAME" .
     - docker push "$IMAGE:$COMMIT_TAG"
-  only:
-    - master
+  when: manual
 
-deploy_staging:
+STAGING-pre-deploy:
+  stage: pre-deploy
+  image: registry.anybox.cloud/infra/infra-cli:master
+  environment:
+    name: staging
+    url: https://$DNS_STAGING
+  script:
+    - aws_cli create-dns-if-not-exists $DNS_STAGING staging
+    - aws_cli pg-create-role $DB_HOST_RDS_STAGING $CREATEROLE_USER $CREATEROLE_PASS "$CI_PROJECT_NAMESPACE"_"$CI_PROJECT_NAME" $DB_PASSWORD_STAGING
+  when: manual
+
+STAGING-deploy:
   extends: .deployment
   stage: deploy
   environment:
     name: staging
     url: https://$DNS_STAGING
   script:
-    - aws_cli create-dns-if-not-exists $DNS_STAGING staging
-    - aws_cli create-efs-directory $CI_PROJECT_PATH/$CI_ENVIRONMENT_NAME/db $CI_ENVIRONMENT_NAME
     - envsubst < docker-compose.staging.yml > docker-compose.yml
     - |-
           portainer_cli deploy-stack $PORTAINER_USER $PORTAINER_PASS \
@@ -75,3 +84,4 @@ deploy_staging:
               docker tag "$CI_REGISTRY_IMAGE:$COMMIT_TAG" "$CI_REGISTRY_IMAGE:staging") || \
               (docker tag "$CI_REGISTRY_IMAGE:$COMMIT_TAG" "$CI_REGISTRY_IMAGE:staging")
     - docker push "$CI_REGISTRY_IMAGE:staging"
+  when: manual

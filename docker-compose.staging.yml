@@ -17,15 +17,6 @@ services:
         - default
         - traefik_traefik-net
 
-    db:
-      image: postgres:12
-      volumes:
-        - /efs/${CI_PROJECT_PATH}/${CI_ENVIRONMENT_NAME}/db/:/var/lib/postgresql/data/
-      environment:
-        - POSTGRES_USER=anyrepo
-        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    networks:
-      - default
 
 networks:
   default:
