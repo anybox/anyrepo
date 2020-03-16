@@ -18,4 +18,4 @@ RUN mkdir -p "$(dirname ${ANYREPO_CONFIG})"
 RUN echo "${CONFIG}" > "${ANYREPO_CONFIG}"
 EXPOSE 8888
 
-ENTRYPOINT ["gunicorn", "-b", "0.0.0.0:8888", "app"]
+ENTRYPOINT ["gunicorn", "-b", "0.0.0.0:8888", "app:app"]
