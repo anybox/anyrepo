@@ -47,7 +47,6 @@ STAGING-pre-deploy:
     name: staging
     url: https://$DNS_STAGING
   script:
-    - env
     - aws_cli create-dns-if-not-exists $DNS_STAGING staging
     - aws_cli pg-create-role $DB_HOST_RDS_STAGING $CREATEROLE_USER $CREATEROLE_PASS "$CI_PROJECT_NAMESPACE"_"$CI_PROJECT_NAME" $DB_PASSWORD_STAGING
     - aws_cli pg-create-db $DB_HOST_RDS_STAGING "$CI_PROJECT_NAMESPACE"_"$CI_PROJECT_NAME" $DB_PASSWORD_STAGING "$CI_PROJECT_NAMESPACE"_"$CI_PROJECT_NAME"

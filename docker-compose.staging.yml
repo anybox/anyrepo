@@ -13,9 +13,9 @@ services:
           traefik.backend: "anyrepo"
           traefik.domain.network: "traefik_traefik-net"
           traefik.frontend.rule: "Host:${DNS_STAGING}"
-      networks:
-        - default
-        - traefik_traefik-net
+    networks:
+      - default
+      - traefik_traefik-net
 
 
 networks:
