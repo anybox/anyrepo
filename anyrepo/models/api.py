@@ -31,6 +31,9 @@ class ApiType(Enum):
     GITHUB = "github"
     GITLAB = "gitlab"
 
+    def __str__(self):
+        return str(self.name)
+
 
 class ApiModel(db.Model):
     """API table."""
