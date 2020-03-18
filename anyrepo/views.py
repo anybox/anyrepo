@@ -128,7 +128,10 @@ def api_edit(apiuuid=None):
     form = ApiForm(obj=api)
     if request.method == "POST":
         url = form.url.data
-        exists = ApiModel.query.filter_by(url=url).first()
+        api_id = api.id or 0
+        exists = ApiModel.query.filter(
+            ApiModel.url == url, ApiModel.id != api_id
+        ).first()
         if exists is not None:
             flash("There is already an API for this url", "error")
         elif form.validate_on_submit():
