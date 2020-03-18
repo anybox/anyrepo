@@ -12,7 +12,7 @@
     </h1>
   </header>
   <div class="box">
-    <form action="{{ url_for('admin.api_edit') }}" method="POST">
+    <form action="." method="POST">
       {{ form.hidden_tag() }}
       <div>{{ form.name.label }} {{ form.name() }}</div>
       <div>{{ form.url.label }} {{ form.url() }}</div>

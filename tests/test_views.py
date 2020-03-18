@@ -133,6 +133,17 @@ def test_api_edit(app, client, dbapi):
     assert dbapi.url == "http://testapi.com/"
     assert dbapi.get_token() == "A new token"
 
+    # only modify token
+    data["token"] = "Another one"
+    res = client.post(
+        f"/api/edit/{dbapi.slug}/", data=data, follow_redirects=True
+    )
+
+    assert res.status_code == 200
+    assert dbapi.name == "This is a test"
+    assert dbapi.url == "http://testapi.com/"
+    assert dbapi.get_token() == "Another one"
+
     invalid_data = {
         "name": "This is a second test",
         "api_type": "GITHUB",
