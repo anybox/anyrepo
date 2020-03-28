@@ -25,7 +25,9 @@ unit-tests:
     - docker:18.09.7-dind
   before_script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $DOCKER_ENV_CI_REGISTRY
-
+  only:
+    refs:
+      - deploy
 
 STAGING-build:
   extends: .deployment
@@ -51,6 +53,9 @@ STAGING-pre-deploy:
     - aws_cli pg-create-role $DB_HOST_RDS_STAGING $CREATEROLE_USER $CREATEROLE_PASS "$CI_PROJECT_NAMESPACE"_"$CI_PROJECT_NAME" $DB_PASSWORD_STAGING
     - aws_cli pg-create-db $DB_HOST_RDS_STAGING "$CI_PROJECT_NAMESPACE"_"$CI_PROJECT_NAME" $DB_PASSWORD_STAGING "$CI_PROJECT_NAMESPACE"_"$CI_PROJECT_NAME"
   when: manual
+  only:
+    refs:
+      - deploy
 
 STAGING-deploy:
   extends: .deployment
