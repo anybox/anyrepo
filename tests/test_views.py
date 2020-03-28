@@ -14,13 +14,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
+import random
+import string
 from unittest.mock import patch
 
 import ldap
 
+from anyrepo.models import db
 from anyrepo.models.api import ApiModel
 from anyrepo.models.hook import HookModel
+from anyrepo.models.user import User
+
+
+def randomstr():
+    return "".join([random.choice(string.ascii_uppercase) for _ in range(20)])
 
 
 @patch("ldap.initialize")
@@ -56,13 +63,12 @@ def test_login_ldap(fakeldap, client, user):
     assert b"Invalid username or password" not in res.data
 
 
-def test_index(client):
+def test_index(client, user):
     res = client.get("/")
     assert res.status_code == 200
-    assert b"3 registered APIs" in res.data
-    assert b"2 registered Hooks" in res.data
-    assert b"Registered a blueprint for a gitlab hook at /gitlab/" in res.data
-    assert b"Registered a blueprint for a github hook at /github/" in res.data
+    assert b"3 APIs" in res.data
+    assert b"2 Hooks" in res.data
+    assert b"1 User" in res.data
 
 
 def test_api_list(client):
@@ -71,18 +77,6 @@ def test_api_list(client):
     assert b"github" in res.data
     assert b"gitlab" in res.data
     assert b"anothergitlab" in res.data
-
-
-def test_api_details(client, dbapi):
-    res = client.get(f"/api/details/{dbapi.slug}/")
-    token = dbapi.get_token()
-    assert res.status_code == 200
-    assert dbapi.name.encode() in res.data
-    assert dbapi.url.encode() in res.data
-    assert token.encode() not in res.data
-
-    res = client.get(f"/api/details/notaslug/")
-    assert res.status_code == 404
 
 
 def test_hooks(client):
@@ -199,7 +193,7 @@ def test_delete_api(app, client, dbapi):
         assert res.status_code == 404
 
         res = client.post("/api/delete/", data={})
-        assert res.status_code == 501
+        assert res.status_code == 404
 
 
 def test_hook_edit(app, client, github_hook):
@@ -222,3 +216,117 @@ def test_hook_edit(app, client, github_hook):
 
         res = client.post(f"/hook/edit/{github_hook.slug}/", data={})
         assert res.status_code == 200
+
+
+def test_users(client):
+    res = client.get("/users/")
+    assert res.status_code == 200
+
+
+def test_user_delete_ldap(client, app, user):
+    res = client.post(
+        "/user/delete/", data={"slug": user.slug}, follow_redirects=True
+    )
+
+    assert res.status_code == 200
+    assert b"Users are managed by a LDAP provider" in res.data
+
+
+def test_user_delete(app_without_ldap):
+    with app_without_ldap.app_context():
+        user = User.query.filter_by(username="test").first()
+
+        client = app_without_ldap.test_client()
+        res = client.post("/user/delete/", data={"slug": user.slug})
+        assert res.status_code == 403
+        assert b"You can not delete the only user" in res.data
+
+        user2 = User(username=randomstr())
+        user2.set_password(randomstr())
+        db.session.add(user2)
+        db.session.commit()
+
+        res = client.post("/user/delete/", data={"slug": user2.slug})
+        assert res.status_code == 302
+        assert User.query.count() == 1
+
+        res = client.post("/user/delete/", data={})
+        assert res.status_code == 404
+
+
+def test_user_edit_ldap(client, app, user):
+    res = client.post(
+        f"/user/edit/{user.slug}/",
+        data={
+            "username": user.username,
+            "password": "test",
+            "confirm": "test",
+        },
+        follow_redirects=True,
+    )
+    assert res.status_code == 200
+    assert b"Users are managed by a LDAP provider" in res.data
+
+
+def test_user_edit(app_without_ldap):
+    with app_without_ldap.app_context():
+        user = User.query.filter_by(username="test").first()
+        client = app_without_ldap.test_client()
+
+        res = client.get(f"/user/edit/notaslug/")
+        assert res.status_code == 404
+
+        username = randomstr()
+        res = client.post(
+            f"/user/edit/{user.slug}/",
+            data={"username": username, "password": "test", "confirm": "test"},
+            follow_redirects=True,
+        )
+        assert res.status_code == 200
+        assert user.username == username
+        assert user.check_password("test") is True
+
+        res = client.post(
+            f"/user/edit/{user.slug}/",
+            data={
+                "username": randomstr(),
+                "password": "test2",
+                "confirm": "test",
+            },
+            follow_redirects=True,
+        )
+        assert res.status_code == 200
+        assert user.username == username
+        assert user.check_password("test2") is False
+
+        res = client.post(
+            "/user/new/",
+            data={
+                "username": username,
+                "password": randomstr(),
+                "confirm": randomstr(),
+            },
+        )
+        assert res.status_code == 200
+        assert b"There is already a User with this username" in res.data
+
+        new_username = randomstr()
+        new_password = randomstr()
+        res = client.post(
+            "/user/new/",
+            data={
+                "username": new_username,
+                "password": new_password,
+                "confirm": new_password,
+            },
+            follow_redirects=True,
+        )
+        assert res.status_code == 200
+        assert b"User successfully created" in res.data
+
+        new_user = User.query.filter_by(username=new_username).first()
+        assert new_user.username == new_username
+        assert new_user.check_password(new_password) is True
+
+        db.session.delete(new_user)
+        db.session.commit()

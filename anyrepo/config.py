@@ -123,6 +123,10 @@ def parse_config_users(config: Dict[str, Any], app: Flask, db: SQLAlchemy):
     """Pre populate User table with config."""
     try:
         app.logger.debug("Parse config user part")
+        if "ldap_provider_url" in config["anyrepo"]:
+            app.logger.debug("LDAP configuration found, skip creating user")
+            return
+
         users = config["users"]
         if not users:
             app.logger.warning("No user registered for the app")

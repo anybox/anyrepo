@@ -1,7 +1,32 @@
 {# -*- engine: django -*- #}
 {% extends "base.html" %}
 
+{% block head %}
+  <style lang="css">
+  .title {
+    margin-bottom: 0;
+    margin-top: 0;
+    font-weight: bold;
+    font-size: 1.4rem;
+    margin-right: 2rem;
+    margin-left: .5rem;
+    text-transform: capitalize;
+    color: #2f2f2f;
+  }
+  .url {
+    color: #6f6f6f;
+    font-style: italic;
+  }
+  </style>
+{% endblock %}
+
 {% block content %}
+  <nav id="path">
+    <span class="separator">&gt;</span>
+    <a href="{{ url_for('admin.index') }}">Dashboard</a>
+    <span class="separator">/</span>
+    <span class="selected">Apis</span>
+  </nav>
   <header class="flex vcenter spacebetween">
     <h1>APIs</h1>
     <a class="button" href="{{ url_for('admin.api_edit') }}">
@@ -12,35 +37,35 @@
   {% if apis|length == 0 %}
     <p align="center">No APIs registered</p>
   {% else %}
-    <table class="fullwidth">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Url</th>
-          <th>Api Type</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for api in apis %}
-          <tr>
-            <td>
-              <a href="{{ url_for('admin.api_detail', apiuuid=api.slug )}}">
-                {{ api.name }}
-              </a>
-            </td>
-            <td>
-              <a href="{{ url_for('admin.api_detail', apiuuid=api.slug )}}">
-                {{ api.url }}
-              </a>
-            </td>
-            <td>
-              <a href="{{ url_for('admin.api_detail', apiuuid=api.slug )}}">
-                {{ api.api_type.value }}
-              </a>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <form id="deleteform" action="{{ url_for('admin.api_delete') }}" method="POST">
+      <input type="hidden" name="slug" id="apislug" value="">
+    </form>
+    {% for api in apis %}
+      <div class="box flex vcenter spacebetween">
+        <div class="flex vcenter">
+          <i class="fab fa-{{ api.api_type.value }}"></i>
+          <span class="title">{{ api.name }}</span>
+          <span class="url">{{ api.url }}</span>
+        </div>
+        <div class="action">
+          <a href="{{ url_for('admin.api_edit', apiuuid=api.slug) }}" title="Modify API">
+            <i class="fas fa-edit"></i>
+          </a>
+          <a href="#" title="Delete API" class="error" onclick="deleteAPI('{{ api.slug }}')">
+            <i class="fas fa-times error" ></i>
+          </a>
+        </div>
+      </div>
+    {% endfor %}
   {% endif %}
+{% endblock %}
+
+{% block footer %}
+  <script>
+  function deleteAPI(value) {
+    const inputSlug = document.getElementById('apislug')
+    inputSlug.value = value
+    document.getElementById('deleteform').submit()
+  }
+  </script>
 {% endblock %}

@@ -18,8 +18,6 @@ import hmac
 import json
 from unittest.mock import patch
 
-from anyrepo.models.log import Log
-
 
 def regenerate_headers_hash_from_data(secret: bytes, data: str) -> str:
     hash_object = hmac.new(secret, data.encode("utf-8"), "sha1")
@@ -77,7 +75,6 @@ def test_wrong_data(
         data_dict = json.loads(new_gh_issue_str)
         del data_dict["action"]
         data = json.dumps(data_dict)
-        hook_log_count = Log.query.filter_by(hook_id=github_hook.id).count()
 
         gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
             gh_secret, data
@@ -91,9 +88,7 @@ def test_wrong_data(
         )
 
         json_data = response.get_json()
-        new_count = Log.query.filter_by(hook_id=github_hook.id).count()
         assert json_data == {"status": "error"}
-        assert new_count > hook_log_count
 
 
 @patch("anyrepo.models.api.ApiModel.get_client")
@@ -166,7 +161,6 @@ def test_create_issue_error(
 ):
     api = get_client.return_value
     api.get_project_from_name.side_effect = Exception("test")
-    api_log_count = Log.query.filter_by(api_id=dbapi.id).count()
     data = new_gh_issue_str
     gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
         gh_secret, data
@@ -181,10 +175,8 @@ def test_create_issue_error(
 
     json_data = response.get_json()
 
-    new_count = Log.query.filter_by(api_id=dbapi.id).count()
     assert "FakeAPI" in json_data
     assert json_data["FakeAPI"] == {"status": "error"}
-    assert new_count > api_log_count
 
 
 @patch("anyrepo.models.api.ApiModel.get_client")
@@ -316,7 +308,6 @@ def test_create_comment_error(
 ):
     api = get_client.return_value
     api.get_project_from_name.side_effect = Exception("test")
-    api_log_count = Log.query.filter_by(api_id=dbapi.id).count()
     data = new_gh_issue_comment_str
     gh_headers["HTTP_X_HUB_SIGNATURE"] = regenerate_headers_hash_from_data(
         gh_secret, data
@@ -330,11 +321,9 @@ def test_create_comment_error(
     )
 
     json_data = response.get_json()
-    new_log_count = Log.query.filter_by(api_id=dbapi.id).count()
 
     assert "FakeAPI" in json_data
     assert json_data["FakeAPI"] == {"status": "error"}
-    assert new_log_count > api_log_count
 
 
 @patch("anyrepo.models.api.ApiModel.get_client")

@@ -2,6 +2,16 @@
 {% extends "base.html" %}
 
 {% block content %}
+  <nav id="path">
+    <span class="separator">&gt;</span>
+    <a href="{{ url_for('admin.index') }}">Dashboard</a>
+    <span class="separator">/</span>
+    <a href="{{ url_for('admin.hooks') }}">Hooks</a>
+    <span class="separator">/</span>
+    <a href="{{ url_for('admin.hook_detail', hookuuid=hook.slug) }}">Hook {{ hook.endpoint }}</a>
+    <span class="separator">/</span>
+    <span class="selected">Edit</span>
+  </nav>
   <header>
     <h1>Hook {{ hook.endpoint }}</h1>
   </header>

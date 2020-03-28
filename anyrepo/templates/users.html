@@ -1,0 +1,87 @@
+{# -*- engine: django -*- #}
+{% extends "base.html" %}
+
+{% block head %}
+  <style lang="css">
+  .info {
+    color: var(--black);
+    padding: 1em .5em;
+    background-color: var(--light-primary);
+    border: 1px solid var(--dark-primary);
+    border-radius: 5px;
+    margin-bottom: 2em;
+  }
+  .info .fas {
+    font-size: 1.5em;
+    margin-right: .5em;
+    border-radius: 50%;
+    color: white;
+    background-color: var(--primary);
+    height: 2em;
+    width: 2em;
+    text-align: center;
+    line-height: 2em;
+  }
+  .username {
+    margin-left: .5em;
+  }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <nav id="path">
+    <span class="separator">&gt;</span>
+    <a href="{{ url_for('admin.index') }}">Dashboard</a>
+    <span class="separator">/</span>
+    <span class="selected">Users</span>
+  </nav>
+  <header class="flex vcenter spacebetween">
+    <h1>Users</h1>
+    <a class="button {{ 'disabled' if ldap }}" href="{{ url_for('admin.user_edit') }}">
+      <i class="fas fa-plus"></i>
+      Add a new User
+    </a>
+  </header>
+  {% if ldap %}
+    <p class="info flex vcenter">
+      <i class="fas fa-info"></i>
+      Users are managed using a LDAP provider
+    </p>
+  {% else %}
+    {% if users|length == 0 %}
+      <p align="center">No users registered</p>
+    {% else %}
+      <form id="deleteform" action="{{ url_for('admin.user_delete') }}" method="POST">
+        <input type="hidden" name="slug" id="userslug" value="">
+      </form>
+      {% for user in users %}
+        <div class="box flex vcenter spacebetween">
+          <div class="flex vcenter">
+            <i class="fas fa-user"></i>
+            <span class="username">{{ user.username }}</span>
+          </div>
+          <div class="action">
+            <a href="{{ url_for('admin.user_edit', useruuid=user.slug) }}" title="Modify User">
+              <i class="fas fa-edit"></i>
+            </a>
+            {% if users|length > 1 %}
+              <a href="#" title="Delete User" class="error" onclick="deleteUser('{{ user.slug }}')">
+                <i class="fas fa-times error" ></i>
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
+{% block footer %}
+  <script>
+  function deleteUser(value) {
+    const inputSlug = document.getElementById('userslug')
+    inputSlug.value = value
+    document.getElementById('deleteform').submit()
+  }
+  </script>
+{% endblock %}

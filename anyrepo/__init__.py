@@ -27,7 +27,6 @@ from anyrepo.config import (
     parse_config_hooks,
     parse_config_users,
 )
-from anyrepo.logger import SQLAlchemyHandler, SQLAlchemyLoggerFormatter
 from anyrepo.models import db
 from anyrepo.views import admin, login_manager
 
@@ -62,13 +61,6 @@ def create_app():
     # logs
     level = app.config.get("LOGLEVEL", "INFO")
     app.logger.setLevel(getattr(logging, level))
-    handler = SQLAlchemyHandler()
-    formatter = SQLAlchemyLoggerFormatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    handler.setLevel(getattr(logging, level))
-    handler.setFormatter(formatter)
-    app.logger.addHandler(handler)
 
     # admin
     app.register_blueprint(admin)

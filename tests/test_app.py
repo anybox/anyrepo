@@ -124,6 +124,7 @@ def test_invalid_api_in_config_file(config, confpath):
 
 def test_no_users_part(config, confpath):
     updated_config = deepcopy(config)
+    del updated_config["anyrepo"]["ldap_provider_url"]
     del updated_config["users"]
     with open(confpath, "w") as fi:
         toml.dump(updated_config, fi)
@@ -135,6 +136,7 @@ def test_no_users_part(config, confpath):
 
 def test_no_users(config, confpath, caplog):
     updated_config = deepcopy(config)
+    del updated_config["anyrepo"]["ldap_provider_url"]
     updated_config["users"] = {}
     with open(confpath, "w") as fi:
         toml.dump(updated_config, fi)
@@ -146,7 +148,8 @@ def test_no_users(config, confpath, caplog):
 
 def test_invalid_user_keys(config, confpath):
     updated_config = deepcopy(config)
-    del updated_config["users"]["admin"]["username"]
+    del updated_config["anyrepo"]["ldap_provider_url"]
+    del updated_config["users"]["test"]["username"]
     with open(confpath, "w") as fi:
         toml.dump(updated_config, fi)
 

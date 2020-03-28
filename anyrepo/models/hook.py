@@ -16,10 +16,14 @@
 
 
 from enum import Enum
+from typing import TYPE_CHECKING, List
 from uuid import uuid4
 
 from anyrepo.models import db
 from anyrepo.models.encryption import decrypt_data, encrypt_data
+
+if TYPE_CHECKING:
+    from anyrepo.models.request import RequestModel  # noqa: F401
 
 
 class HookType(Enum):
@@ -42,7 +46,7 @@ class HookModel(db.Model):
     hook_type = db.Column(db.Enum(HookType), nullable=False, name="type")
     secret_encrypted = db.Column(db.LargeBinary, nullable=False, name="secret")
 
-    logs = db.relationship("Log", lazy=True)
+    requests = db.relationship("RequestModel", backref="hook", lazy=True)
 
     def set_secret(self, secret_value: str):
         """Encrypt secret using app secret key and store it into
@@ -53,3 +57,13 @@ class HookModel(db.Model):
     def get_secret(self) -> str:
         """Get decrypted data from secret_encrypted_field."""
         return decrypt_data(self.secret_encrypted)
+
+    @property
+    def good_requests(self) -> List["RequestModel"]:
+        """Get good requests list."""
+        return [request for request in self.requests if request.status == 200]
+
+    @property
+    def bad_requests(self) -> List["RequestModel"]:
+        """Get bad requests list."""
+        return [request for request in self.requests if request.status != 200]

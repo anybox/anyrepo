@@ -22,6 +22,8 @@ from flask import (
     abort,
     current_app,
     flash,
+    jsonify,
+    make_response,
     redirect,
     render_template,
     request,
@@ -30,11 +32,11 @@ from flask import (
 )
 from flask_login import LoginManager, login_required, login_user, logout_user
 
-from anyrepo.forms import ApiForm, HookForm, LoginForm
+from anyrepo.forms import ApiForm, HookForm, LoginForm, UserForm
 from anyrepo.models import db
 from anyrepo.models.api import ApiModel
 from anyrepo.models.hook import HookModel
-from anyrepo.models.log import Log
+from anyrepo.models.request import RequestModel
 from anyrepo.models.user import User
 
 admin = Blueprint("admin", __name__)
@@ -87,15 +89,18 @@ def login():
 @login_required
 def index():
     """List admin page."""
-    logs = (
-        Log.query.filter(Log.api_id.is_(None), Log.hook_id.is_(None))
-        .order_by(Log.created_at)
-        .all()
-    )
     apicount = ApiModel.query.count()
     hookcount = HookModel.query.count()
+    usercount = User.query.count()
+    badrequests = RequestModel.query.filter(RequestModel.status != 200).count()
+    goodrequests = RequestModel.query.filter_by(status=200).count()
     return render_template(
-        "index.html", logs=logs, apicount=apicount, hookcount=hookcount
+        "index.html",
+        apicount=apicount,
+        hookcount=hookcount,
+        usercount=usercount,
+        badrequests=badrequests,
+        goodrequests=goodrequests,
     )
 
 
@@ -105,14 +110,6 @@ def apis():
     """List all the registered APIs."""
     apis = ApiModel.query.all()
     return render_template("apis.html", apis=apis)
-
-
-@admin.route("/api/details/<apiuuid>/")
-@login_required
-def api_detail(apiuuid):
-    """Show API details."""
-    api = ApiModel.query.filter_by(slug=apiuuid).first_or_404()
-    return render_template("apidetail.html", api=api)
 
 
 @admin.route("/api/new/", defaults={"apiuuid": None}, methods=["GET", "POST"])
@@ -147,7 +144,7 @@ def api_edit(apiuuid=None):
 
             db.session.commit()
             flash(msg, "success")
-            return redirect(url_for("admin.api_detail", apiuuid=api.slug))
+            return redirect(url_for("admin.apis"))
         else:
             for field, errors in form.errors.items():
                 flash(f"{form[field].name} : {', '.join(errors)}", "error")
@@ -161,7 +158,7 @@ def api_delete():
     """Delete an api from its uuid."""
     apiuuid = request.form.get("slug")
     if not apiuuid:
-        abort(501)
+        abort(404)
 
     api = ApiModel.query.filter_by(slug=apiuuid).first_or_404()
     db.session.delete(api)
@@ -208,6 +205,87 @@ def hook_detail(hookuuid):
     hook = HookModel.query.filter_by(slug=hookuuid).first_or_404()
     hostname = request.url_root[:-1]
     return render_template("hookdetail.html", hook=hook, hostname=hostname)
+
+
+@admin.route("/users/")
+@login_required
+def users():
+    """List users."""
+    users = User.query.all()
+    return render_template(
+        "users.html",
+        users=users,
+        ldap=current_app.config.get("LDAP_PROVIDER_URL"),
+    )
+
+
+@admin.route(
+    "/user/new/", defaults={"useruuid": None}, methods=["GET", "POST"]
+)
+@admin.route("/user/edit/<useruuid>/", methods=["GET", "POST"])
+@login_required
+def user_edit(useruuid=None):
+    """Create or edit a user."""
+    ldap_provider = current_app.config.get("LDAP_PROVIDER_URL")
+    if ldap_provider is not None:
+        flash("Users are managed by a LDAP provider", "error")
+        return redirect(url_for("admin.users"))
+
+    user = (
+        User.query.filter_by(slug=useruuid).first_or_404()
+        if useruuid
+        else User()
+    )
+    form = UserForm(obj=user)
+    if request.method == "POST":
+        userid = user.id or 0
+        exists = User.query.filter(
+            User.username == form.username.data, User.id != userid
+        ).first()
+        if exists is not None:
+            flash("There is already a User with this username", "error")
+        elif form.validate_on_submit():
+            user.username = form.username.data
+            user.set_password(form.password.data)
+            msg = "User successfully modified"
+
+            if not user.id:
+                db.session.add(user)
+                msg = "User successfully created"
+
+            db.session.commit()
+            flash(msg, "success")
+            return redirect(url_for("admin.users"))
+        else:
+            for field, errors in form.errors.items():
+                flash(f"{form[field].name} : {', '.join(errors)}", "error")
+
+    return render_template("userform.html", form=form, user=user)
+
+
+@admin.route("/user/delete/", methods=["POST"])
+@login_required
+def user_delete():
+    """Delete a user from its uuid."""
+    ldap = current_app.config.get("LDAP_PROVIDER_URL")
+    if ldap is not None:
+        flash("Users are managed by a LDAP provider", "error")
+        return redirect(url_for("admin.users"))
+
+    useruuid = request.form.get("slug")
+    if not useruuid:
+        abort(404)
+
+    count = User.query.count()
+    if count == 1:
+        msg = "You can not delete the only user"
+        abort(make_response(jsonify(message=msg), 403))
+
+    user = User.query.filter_by(slug=useruuid).first_or_404()
+    db.session.delete(user)
+    db.session.commit()
+    flash("User successfully removed", "success")
+    return redirect(url_for("admin.users"))
 
 
 @admin.route("/logout/")

@@ -15,12 +15,23 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import hmac
+import json
 from urllib.parse import urlparse
 
-from flask import Blueprint, abort, current_app, g, jsonify, request
+from flask import (
+    Blueprint,
+    Response,
+    abort,
+    current_app,
+    jsonify,
+    make_response,
+    request,
+)
 
+from anyrepo.models import db
 from anyrepo.models.api import ApiModel
 from anyrepo.models.hook import HookModel
+from anyrepo.models.request import RequestModel
 
 github_hook = Blueprint("github_hook", __name__)
 
@@ -31,27 +42,30 @@ def check_validity():
     endpoint = request.url_rule.rule
     hook = HookModel.query.filter_by(endpoint=endpoint).first_or_404()
     secret = hook.get_secret()
-    g.hook = hook
 
     header_sign = request.headers.get("X-Hub-Signature")
     if not header_sign:
-        current_app.logger.error("No header sign", {"hook_id": hook.id})
-        abort(403)
+        msg = "No header sign"
+        current_app.logger.error(msg)
+        abort(make_response(jsonify(message=msg), 403))
 
     sha_name, sign = header_sign.split("=")
     if sha_name != "sha1":
-        current_app.logger.error("Not SHA1", {"hook_id": hook.id})
-        abort(501)
+        msg = "Not SHA1"
+        current_app.logger.error(msg)
+        abort(make_response(jsonify(message=msg), 501))
 
     mac = hmac.new(secret.encode("utf-8"), msg=request.data, digestmod="sha1")
     if not hmac.compare_digest(str(mac.hexdigest()), str(sign)):
-        current_app.logger.error("Invalid secret", {"hook_id": hook.id})
-        abort(403)
+        msg = "Invalid secret"
+        current_app.logger.error(msg)
+        abort(make_response(jsonify(message=msg), 403))
 
     referer = request.headers.get("User-Agent", "")
     if not referer.startswith("GitHub-Hookshot"):
-        current_app.logger.error("Invalid referer", {"hook_id": hook.id})
-        abort(403)
+        msg = "Invalid referer"
+        current_app.logger.error(msg)
+        abort(make_response(jsonify(message=msg), 403))
 
 
 @github_hook.route("/", methods=["POST"])
@@ -68,7 +82,7 @@ def index():
         elif event_type == "issue_comment":
             response = manage_issue_comment(data)
     except Exception as err:
-        current_app.logger.error(str(err), {"hook_id": g.hook.id})
+        current_app.logger.error(str(err))
         response = {"status": "error"}
 
     return jsonify(response)
@@ -109,7 +123,7 @@ def manage_issues(data: dict) -> dict:
                     issue.state = "close"
                     response[api.name]["status"] = "done"
         except Exception as err:
-            current_app.logger.error(str(err), {"api_id": api.id})
+            current_app.logger.error(str(err))
             response[api.name] = {"status": "error"}
 
     return response
@@ -155,7 +169,29 @@ def manage_issue_comment(data: dict) -> dict:
                         comment.delete()
                         response[api.name]["status"] = "done"
         except Exception as err:
-            current_app.logger.error(str(err), {"api_id": api.id})
+            current_app.logger.error(str(err))
             response[api.name] = {"status": "error"}
+
+    return response
+
+
+@github_hook.after_request
+def save_request(response: Response):
+    """Save request in db."""
+    if request.url_rule:
+        endpoint = request.url_rule.rule
+        hook = HookModel.query.filter_by(endpoint=endpoint).first_or_404()
+
+        request_model = RequestModel(
+            hook_id=hook.id,
+            headers=json.dumps(
+                {key: value for key, value in request.headers.items()}
+            ),
+            body=request.data.decode("utf-8"),
+            status=response.status_code,
+            response=response.data.decode("utf-8"),
+        )
+        db.session.add(request_model)
+        db.session.commit()
 
     return response

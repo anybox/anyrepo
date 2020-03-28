@@ -18,7 +18,6 @@ import json
 from unittest.mock import patch
 
 from anyrepo.models import db
-from anyrepo.models.log import Log
 
 
 def test_ping(client, gl_headers):
@@ -45,7 +44,6 @@ def test_wrong_data(app, client, gl_headers, new_gl_issue_str, gitlab_hook):
     with app.app_context():
         data_dict = json.loads(new_gl_issue_str)
         del data_dict["object_attributes"]
-        hook_log_count = Log.query.filter_by(hook_id=gitlab_hook.id).count()
         gl_headers["HTTP_X_GITLAB_EVENT"] = "Issue Hook"
 
         response = client.post(
@@ -57,9 +55,7 @@ def test_wrong_data(app, client, gl_headers, new_gl_issue_str, gitlab_hook):
 
         json_data = response.get_json()
 
-        new_count = Log.query.filter_by(hook_id=gitlab_hook.id).count()
         assert json_data == {"status": "error"}
-        assert new_count > hook_log_count
 
 
 def test_unknown_event(client, gl_headers):
@@ -100,7 +96,6 @@ def test_create_issue_error(
 ):
     api = get_client.return_value
     api.get_project_from_name.side_effect = Exception("test")
-    api_log_count = Log.query.filter_by(api_id=dbapi.id).count()
     data = new_gl_issue_str
     gl_headers["HTTP_X_GITLAB_EVENT"] = "Issue Hook"
 
@@ -112,11 +107,9 @@ def test_create_issue_error(
     )
 
     json_data = response.get_json()
-    new_log_count = Log.query.filter_by(api_id=dbapi.id).count()
 
     assert "FakeAPI" in json_data
     assert json_data["FakeAPI"] == {"status": "error"}
-    assert new_log_count > api_log_count
 
 
 @patch("anyrepo.models.api.ApiModel.get_client")
@@ -216,7 +209,6 @@ def test_create_comment_error(
 ):
     api = get_client.return_value
     api.get_project_from_name.side_effect = Exception("test")
-    api_log_count = Log.query.filter_by(api_id=dbapi.id).count()
     data = new_gl_issue_comment_str
     gl_headers["HTTP_X_GITLAB_EVENT"] = "Note Hook"
 
@@ -228,11 +220,9 @@ def test_create_comment_error(
     )
 
     json_data = response.get_json()
-    new_log_count = Log.query.filter_by(api_id=dbapi.id).count()
 
     assert "FakeAPI" in json_data
     assert json_data["FakeAPI"] == {"status": "error"}
-    assert new_log_count > api_log_count
 
 
 @patch("anyrepo.models.api.ApiModel.get_client")

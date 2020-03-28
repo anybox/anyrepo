@@ -1,7 +1,48 @@
 {# -*- engine: django -*- #}
 {% extends "base.html" %}
 
+{% block head %}
+  <style lang="css">
+  .requests {
+    margin-top: 1.5em;
+  }
+  .tabs {
+    list-style: none;
+    margin: .5em 0;
+    padding: 0;
+    border-bottom: 1px solid var(--divider);
+  }
+  .tabs li {
+    display: inline-block;
+    padding: .5em 1em;
+    cursor: pointer;
+  }
+  .tabs .selected {
+    color: var(--dark-primary);
+    border-bottom: 2px solid var(--dark-primary);
+  }
+  .tab-content strong {
+    display: block;
+  }
+  .tab-content code {
+    padding: .75em;
+    background-color: #efefef;
+    margin-bottom: .75em;
+    margin-top: .75em;
+    display: block;
+  }
+  </style>
+{% endblock %}
+
 {% block content %}
+  <nav id="path">
+    <span class="separator">&gt;</span>
+    <a href="{{ url_for('admin.index') }}">Dashboard</a>
+    <span class="separator">/</span>
+    <a href="{{ url_for('admin.hooks') }}">Hooks</a>
+    <span class="separator">/</span>
+    <span class="selected">Hook {{ hook.endpoint }}</span>
+  </nav>
   <header class="flex vcenter spacebetween">
     <h1>Hook {{ hook.endpoint }}</h1>
     <a class="button" href="{{ url_for('admin.hook_edit', hookuuid=hook.slug) }}">
@@ -15,21 +56,64 @@
   </div>
   <div class="flex vcenter">
     <p class="label marginless">Type</p>
-    <p class="marginless">{{ hook.hook_type.value }}</p>
+    <p class="marginless">
+      <i class="fab fa-{{ hook.hook_type.value }}"></i>
+      {{ hook.hook_type.value }}
+    </p>
   </div>
-  <hr>
-  <strong>Last logs</strong>
-  <code class="logs">
-    {% if hook.logs|length == 0 %}
-      <p class="marginless">No logs</p>
-    {% else %}
-      {% for log in hook.logs %}
-        <div>
-          <span>{{ log.created_at }}</span>
-          <span>[{{ log.level }}]</span>
-          <span>{{ log.msg }}</span>
-        </div>
+
+  {% if hook.requests|length %}
+    <div class="requests">
+      <h2>Recent deliveries</h2>
+      {% for request in hook.requests[::-1] %}
+        <details>
+          <summary class="{{ 'success' if request.status == 200 else 'error' }}">
+            [{{ request.created_at.strftime("%Y-%m-%d %H:%M:%S") }}]
+            {{ request.slug }}
+          </summary>
+          <div>
+            <ul class="tabs" role="tablist">
+              <li id="tab-{{ request.id }}-request" class="tab selected">Request</li>
+              <li id="tab-{{ request.id }}-response" class="tab">Response</li>
+            </ul>
+            <div class="tabs-content">
+              <div id="tab-{{ request.id }}-request-content" class="tab-content">
+                <strong>Headers</strong>
+                <code>{{ request.headers }}</code>
+                <strong>Body</strong>
+                <code>{{ request.body }}</code>
+              </div>
+              <div id="tab-{{ request.id }}-response-content" class="tab-content" style="display: none">
+                <strong>Status {{ request.status }}</strong>
+                <code>{{ request.response }}</code>
+              </div>
+            </div>
+          </div>
+        </details>
       {% endfor %}
-    {% endif %}
-  </code>
+    </div>
+  {% endif %}
+{% endblock %}
+
+
+{% block footer %}
+  <script>
+  document.onreadystatechange = () => {
+    if (document.readyState === 'interactive') {
+      Array.from(document.getElementsByClassName('tab')).forEach(tab => {
+        tab.addEventListener('click', () => {
+          const suffix = `-${tab.id.split('-').splice(-1)[0]}`
+          const replace = (suffix === '-request') ? '-response' : '-request'
+
+          if (!tab.classList.contains('selected')) {
+            tab.classList.add('selected')
+            document.getElementById(tab.id.replace(suffix, replace)).classList.remove('selected')
+            document.getElementById(`${tab.id}-content`).style.display = 'block'
+            document.getElementById(`${tab.id.replace(suffix, replace)}-content`).style.display = 'none'
+          }
+        })
+      })
+    }
+  }
+  </script>
 {% endblock %}

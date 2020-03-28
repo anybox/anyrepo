@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+from copy import deepcopy
 from typing import Any, Iterator, MutableMapping
 from unittest.mock import MagicMock
 
@@ -101,8 +102,7 @@ type = "github"
 secret = "mysecondsecret"
 
 [users]
-
-[users.admin]
+[users.test]
 username = "test"
 password = "test"
     """
@@ -122,10 +122,29 @@ def app(config: dict) -> Flask:
 
 
 @pytest.fixture
+def app_without_ldap(config: dict, confpath: str) -> Flask:
+    conf_ = deepcopy(config)
+    del conf_["anyrepo"]["ldap_provider_url"]
+    with open(confpath, "w") as fi:
+        toml.dump(conf_, fi)
+
+    app_ = create_app()
+    app_.config["TESTING"] = True
+    return app_
+
+
+@pytest.fixture
 def user(app: Flask):
     with app.app_context():
-        user_ = User.query.filter_by(username="test").first()
-        return user_
+        user_ = User(username="test")
+        user_.set_password("test")
+        db.session.add(user_)
+        db.session.commit()
+
+        yield user_
+
+        db.session.delete(user_)
+        db.session.commit()
 
 
 @pytest.fixture

@@ -17,7 +17,7 @@
 
 from flask_wtf import FlaskForm
 from wtforms import PasswordField, SelectField, StringField
-from wtforms.validators import InputRequired, Regexp
+from wtforms.validators import EqualTo, InputRequired, Regexp
 
 from anyrepo.models.api import ApiType
 
@@ -32,6 +32,17 @@ class LoginForm(FlaskForm):
 
     username = StringField("Username", [InputRequired()])
     password = PasswordField("Password", [InputRequired()])
+
+
+class UserForm(FlaskForm):
+    """User model form."""
+
+    username = StringField("Username", [InputRequired()])
+    password = PasswordField(
+        "Password",
+        [InputRequired(), EqualTo("confirm", message="Passwords must match")],
+    )
+    confirm = PasswordField("Confirm")
 
 
 class ApiForm(FlaskForm):
