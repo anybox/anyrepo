@@ -6,32 +6,31 @@
     <span class="separator">&gt;</span>
     <a href="{{ url_for('admin.index') }}">Dashboard</a>
     <span class="separator">/</span>
-    <a href="{{ url_for('admin.apis') }}">Apis</a>
+    <a href="{{ url_for('admin.users') }}">Users</a>
     <span class="separator">/</span>
     <span class="selected">
-      {% if api.id %}
-        API {{ api.name }}
+      {% if user.id %}
+        User {{ user.username }}
       {% else %}
-        New API
+        New User
       {% endif %}
     </span>
   </nav>
   <header>
     <h1>
-      {% if api.id %}
-        API {{ api.name }}
+      {% if user.id %}
+        User {{ user.username }}
       {% else %}
-        New API
+        New User
       {% endif %}
     </h1>
   </header>
   <div class="box">
     <form action="." method="POST">
       {{ form.hidden_tag() }}
-      <div>{{ form.name.label }} {{ form.name() }}</div>
-      <div>{{ form.url.label }} {{ form.url() }}</div>
-      <div>{{ form.api_type.label }} {{ form.api_type(width=20) }}</div>
-      <div>{{ form.token.label }} {{ form.token() }}</div>
+      <div>{{ form.username.label }} {{ form.username() }}</div>
+      <div>{{ form.password.label }} {{ form.password() }}</div>
+      <div>{{ form.confirm.label }} {{ form.confirm() }}</div>
       <button type="submit" class="btn fullwidth">Submit</button>
     </form>
   </div>

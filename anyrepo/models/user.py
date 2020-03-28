@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from uuid import uuid4
+
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -25,6 +27,9 @@ class User(db.Model, UserMixin):
     """User model."""
 
     id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(
+        db.String, nullable=False, default=lambda: uuid4().hex, unique=True
+    )
     username = db.Column(db.String, nullable=False, unique=True)
     password_hash = db.Column(db.String, name="password")
 

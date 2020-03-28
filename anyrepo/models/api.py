@@ -49,8 +49,6 @@ class ApiModel(db.Model):
     api_type = db.Column(db.Enum(ApiType), nullable=False, name="type")
     token_encrypted = db.Column(db.LargeBinary, nullable=False, name="token")
 
-    logs = db.relationship("Log", lazy=True)
-
     def set_token(self, token_value: str):
         """Encrypt token using app secret key and store it into token_encrypted
         field.

@@ -1,28 +1,48 @@
 {# -*- engine: django -*- #}
 {% extends "base.html" %}
 
+{% block head %}
+  <style lang="css">
+  .icon {
+    font-size: 1.5em;
+    margin-right: 1em;
+    border-radius: 50%;
+    color: white;
+    background-color: var(--primary);
+    height: 2em;
+    width: 2em;
+    text-align: center;
+    line-height: 2em;
+  }
+  </style>
+{% endblock %}
+
 {% block content %}
-  <h1>AnyRepo</h1>
+  <h1>Dashboard</h1>
   <div>
-    <p>You have</p>
-    <ul>
-      <li>{{ apicount }} registered APIs</li>
-      <li>{{ hookcount }} registered Hooks</li>
-    </ul>
+    <a href="{{ url_for('admin.apis') }}" title="APIs" class="box flex vcenter">
+      <i class="fas fa-plug icon"></i>
+      <p>{{ apicount }} APIs</p>
+    </a>
+    <a class="box flex spacebetween" href="{{ url_for('admin.hooks') }}" title="Hooks">
+      <div class="flex vcenter">
+        <i class="fas fa-network-wired icon"></i>
+        <p>{{ hookcount }} Hooks</p>
+      </div>
+      <div>
+        <p class="marginless error">
+          {{ badrequests }}
+          <i class="fas fa-times"></i>
+        </p>
+        <p class="marginless success">
+          {{ goodrequests }}
+          <i class="fas fa-check"></i>
+        </p>
+      </div>
+    </a>
+    <a href="{{ url_for('admin.users') }}" title="Users" class="box flex vcenter">
+      <i class="fas fa-user icon"></i>
+      <p>{{ usercount }} Users</p>
+    </a>
   </div>
-  <hr>
-  <strong>Last logs</strong>
-  <code class="logs">
-    {% if logs|length == 0 %}
-      <p class="marginless">No logs</p>
-    {% else %}
-      {% for log in logs %}
-        <div>
-          <span>{{ log.created_at }}</span>
-          <span>[{{ log.level }}]</span>
-          <span>{{ log.msg }}</span>
-        </div>
-      {% endfor %}
-    {% endif %}
-  </code>
 {% endblock %}

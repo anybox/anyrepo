@@ -1,37 +1,44 @@
 {# -*- engine: django -*- #}
 {% extends "base.html" %}
 
+{% block head %}
+  <style lang="css">
+  .url {
+    margin-left: .5rem;
+  }
+  </style>
+{% endblock %}
+
 {% block content %}
+  <nav id="path">
+    <span class="separator">&gt;</span>
+    <a href="{{ url_for('admin.index') }}">Dashboard</a>
+    <span class="separator">/</span>
+    <span class="selected">Hooks</span>
+  </nav>
   <header>
     <h1>Hooks</h1>
   </header>
   {% if hooks|length == 0 %}
     <p align="center">No Hooks registered</p>
   {% else %}
-    <p>You have {{ hooks|length }} registered hooks</p>
-    <table class="fullwidth">
-      <thead>
-        <tr>
-          <th>Endpoint</th>
-          <th>Hook Type</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for hook in hooks %}
-          <tr>
-            <td>
-              <a href="{{ url_for('admin.hook_detail', hookuuid=hook.slug) }}">
-                {{ hostname }}{{ hook.endpoint }}
-              </a>
-            </td>
-            <td>
-              <a href="{{ url_for('admin.hook_detail', hookuuid=hook.slug) }}">
-                {{ hook.hook_type.value }}
-              </a>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    {% for hook in hooks %}
+      <a href="{{ url_for('admin.hook_detail', hookuuid=hook.slug) }}" title="Hook detail" class="box flex vcenter spacebetween">
+        <div class="flex vcenter">
+          <i class="fab fa-{{ hook.hook_type.value }}"></i>
+          <span class="url">{{ hostname }}{{ hook.endpoint }}</span>
+        </div>
+        <div>
+          <p class="marginless error">
+            {{ hook.bad_requests|length }}
+            <i class="fas fa-times"></i>
+          </p>
+          <p class="marginless success">
+            {{ hook.good_requests|length }}
+            <i class="fas fa-check"></i>
+          </p>
+        </div>
+      </a>
+    {% endfor %}
   {% endif %}
 {% endblock %}

@@ -8,6 +8,8 @@
     <title>Anyrepo</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.css') }}">
+    {% block head %}
+    {% endblock %}
   </head>
   <body>
     <div id="main">
@@ -18,16 +20,34 @@
         <h1>AnyRepo</h1>
         <ul class="links">
           <li>
-            <a href="{{ url_for('admin.index') }}" title="Home">Home</a>
+            <a href="{{ url_for('admin.index') }}" title="Dashboard" class="flex vcenter">
+              <i class="fas fa-tachometer-alt"></i>
+              Dashboard
+            </a>
           </li>
           <li>
-            <a href="{{ url_for('admin.apis') }}" title="APIs">APIs</a>
+            <a href="{{ url_for('admin.apis') }}" title="APIs" class="flex vcenter">
+              <i class="fas fa-plug"></i>
+              APIs
+            </a>
           </li>
           <li>
-            <a href="{{ url_for('admin.hooks') }}" title="Hooks">Hooks</a>
+            <a href="{{ url_for('admin.hooks') }}" title="Hooks" class="flex vcenter">
+              <i class="fas fa-network-wired"></i>
+              Hooks
+            </a>
           </li>
           <li>
-            <a href="{{ url_for('admin.logout') }}" title="Logout">Logout</a>
+            <a href="{{ url_for('admin.users') }}" title="Users" class="flex vcenter">
+              <i class="fas fa-user"></i>
+              Users
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('admin.logout') }}" title="Logout" class="flex vcenter">
+              <i class="fas fa-sign-out-alt"></i>
+              Logout
+            </a>
           </li>
 
         </ul>
@@ -54,6 +74,8 @@
         {% block content %}
         {% endblock %}
       </div>
+      {% block footer %}
+      {% endblock %}
     </div>
   </body>
 </html>

@@ -1,3 +1,20 @@
+:root {
+  --dark-primary: #00796b;
+  --light-primary: #b2dfdb;
+  --primary: #009688;
+  --white: #fff;
+  --accent: #ff5722;
+  --text: #212121;
+  --secondary-text: #757575;
+  --divider: #bdbdbd;
+  --red: #f44336;
+  --darkred: #d32f2f;
+  --lightred: #ef9a9a;
+  --green: #4caf50;
+  --darkgreen: #388e3c;
+  --lightgreen: #81c784;
+}
+
 @font-face {
   font-family: 'Roboto Mono';
   font-style: normal;
@@ -13,16 +30,16 @@
 body {
   font-family: 'Roboto Mono', sans-serif;
   line-height: 1.6;
-  color: #3E4349;
+  color: var(--text);
   max-width: 60rem;
   margin: auto;
-  background: #fafafa;
+  background: var(--white);
 }
 img {
   max-width: 100%;
 }
 a {
-  color: #228f85;
+  color: var(--accent);
   text-decoration: none;
 }
 #main {
@@ -30,7 +47,7 @@ a {
   margin-top: 2rem;
 }
 #leftnav {
-  min-width: 10rem;
+  min-width: 13rem;
   top: 0;
   position: sticky;
   align-self: flex-start;
@@ -49,16 +66,35 @@ a {
   padding-left: 0;
 }
 #leftnav .links li a {
-  color: #228f85;
+  color: var(--primary);
   font-weight: bold;
   width: 100%;
   height: 100%;
-  display: inline-block;
   padding: 0 .5rem;
 }
+#leftnav .links .fas {
+  min-width: 50px;
+  text-align: center;
+}
 #leftnav .links li a:hover {
-  background: #228f85;
-  color: white;
+  background: var(--primary);
+  color: var(--white);
+}
+#path {
+  margin-bottom: 1em;
+  font-size: .8em;
+}
+#path a,
+#path a:hover,
+#path a:visited {
+  color: var(--primary);
+}
+#path .separator {
+  color: var(--divider);
+}
+#path .selected {
+  color: var(--dark-primary);
+  text-decoration: underline;
 }
 #content {
   padding: 0 2rem;
@@ -76,6 +112,15 @@ a {
   0%   {opacity: 1;}
   100% {opacity: 0;}
 }
+.error {
+  color: var(--darkred);
+}
+.success {
+  color: var(--darkgreen);
+}
+.marginless {
+  margin: 0 !important;
+}
 .flashes li {
   padding: 1em;
   border-radius: .5em;
@@ -87,20 +132,21 @@ a {
   margin-right: .5rem;
 }
 .flashes .error {
-  background: #F67975;
-  color: white;
-  border: 1px solid #B95A5C;
+  background: var(--lightred);
+  color: var(--white);
+  border: 1px solid var(--darkred);
 }
 .flashes .success {
-  background: #BBF5BB;
-  color: #11650F;
-  border: 1px solid #9DD29C;
+  background: var(--lightgreen);
+  color: var(--green);
+  border: 1px solid var(--darkgreen);
 }
 .fullwidth {
   width: 100% !important;
 }
 .box {
   box-shadow: 0 2px 3px rgba(10,10,10,.1),0 0 0 1px rgba(10,10,10,.1);
+  margin-bottom: .5rem;
   padding: .5rem;
 }
 .flex {
@@ -128,56 +174,32 @@ label,
   width: 7rem;
   display: inline-block;
   font-weight: bold;
-  color: #228f85;
 }
 .button {
   -webkit-border-radius: 4px;
   -moz-border-radius: 4px;
   border-radius: 4px;
   border: solid 1px whitesmoke;
-  background: #228f85;
-  color: #FFF;
+  background: var(--primary);
+  color: var(--white);
   padding: 8px 12px;
   text-decoration: none;
+}
+.button.disabled {
+  background: var(--light-primary);
+  pointer-events: none;
 }
 .btn {
   margin-top: 1em;
   width: 80%;
-  background: #228f85;
+  background: var(--primary);
   border-radius: 4px;
   border: solid 1px whitesmoke;
-  color: white;
+  color: var(--white);
   padding: .5rem;
-}
-.delete {
-  background: #E65B65;
 }
 input,
 select {
   width: 75%;
   box-sizing: border-box;
-}
-table {
-  border-spacing: 0;
-  border-collapse: collapse;
-}
-table thead tr {
-  border-bottom: 3px solid #228f85;
-}
-table tbody tr {
-  border-bottom: 1px solid #efefef;
-}
-table tr th {
-  text-align: left;
-  font-weight: bold;
-}
-table tr td a {
-  display: block;
-  height: 100%;
-  width: 100%;
-}
-table tr td,
-table tr th {
-  padding-left: .5rem;
-  padding-right: 0;
 }
