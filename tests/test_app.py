@@ -149,7 +149,7 @@ def test_no_users(config, confpath, caplog):
 def test_invalid_user_keys(config, confpath):
     updated_config = deepcopy(config)
     del updated_config["anyrepo"]["ldap_provider_url"]
-    del updated_config["users"]["test"]["username"]
+    del updated_config["users"]["admin"]["username"]
     with open(confpath, "w") as fi:
         toml.dump(updated_config, fi)
 
