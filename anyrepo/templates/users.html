@@ -61,9 +61,11 @@
             <span class="username">{{ user.username }}</span>
           </div>
           <div class="action">
-            <a href="{{ url_for('admin.user_edit', useruuid=user.slug) }}" title="Modify User">
-              <i class="fas fa-edit"></i>
-            </a>
+            {% if current_user.id == user.id %}
+              <a href="{{ url_for('admin.user_edit', useruuid=user.slug) }}" title="Modify User">
+                <i class="fas fa-edit"></i>
+              </a>
+            {% endif %}
             {% if users|length > 1 %}
               <a href="#" title="Delete User" class="error" onclick="deleteUser('{{ user.slug }}')">
                 <i class="fas fa-times error" ></i>

@@ -102,9 +102,13 @@ type = "github"
 secret = "mysecondsecret"
 
 [users]
-[users.test]
+[users.admin]
 username = "test"
 password = "test"
+
+[users.user]
+username = "test2"
+password = "test2"
     """
     with open(confpath, "w") as fi:
         fi.write(data_)
@@ -130,6 +134,10 @@ def app_without_ldap(config: dict, confpath: str) -> Flask:
 
     app_ = create_app()
     app_.config["TESTING"] = True
+    @app_.login_manager.request_loader
+    def load_user_from_request(request):
+        return User.query.get(1)
+
     return app_
 
 

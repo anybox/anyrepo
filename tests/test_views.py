@@ -236,6 +236,10 @@ def test_user_delete(app_without_ldap):
     with app_without_ldap.app_context():
         user = User.query.filter_by(username="test").first()
 
+        user2 = User.query.filter_by(username="test2").first()
+        db.session.delete(user2)
+        db.session.commit()
+
         client = app_without_ldap.test_client()
         res = client.post("/user/delete/", data={"slug": user.slug})
         assert res.status_code == 403
@@ -271,10 +275,12 @@ def test_user_edit_ldap(client, app, user):
 def test_user_edit(app_without_ldap):
     with app_without_ldap.app_context():
         user = User.query.filter_by(username="test").first()
+        user2 = User.query.filter_by(username="test2").first()
         client = app_without_ldap.test_client()
 
-        res = client.get(f"/user/edit/notaslug/")
-        assert res.status_code == 404
+        res = client.get(f"/user/edit/{user2.slug}/")
+        assert res.status_code == 403
+        assert b"You can only edit your own data" in res.data
 
         username = randomstr()
         res = client.post(
@@ -300,9 +306,26 @@ def test_user_edit(app_without_ldap):
         assert user.check_password("test2") is False
 
         res = client.post(
+            f"/user/edit/{user2.slug}/",
+            data={
+                "username": user2.username,
+                "password": "test",
+                "confirm": "test"
+            }
+        )
+        assert res.status_code == 403
+        assert b"You can only edit your own data" in res.data
+
+
+def test_user_create(app_without_ldap):
+    with app_without_ldap.app_context():
+        user = User.query.filter_by(username="test").first()
+        client = app_without_ldap.test_client()
+
+        res = client.post(
             "/user/new/",
             data={
-                "username": username,
+                "username": user.username,
                 "password": randomstr(),
                 "confirm": randomstr(),
             },
